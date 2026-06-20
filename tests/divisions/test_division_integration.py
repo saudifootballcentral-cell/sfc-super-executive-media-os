@@ -181,6 +181,7 @@ class TestFullPipelineIntegration:
 
 class TestEventPublishingAcrossDivisions:
     async def test_intelligence_publishes_brief_ready_event(self) -> None:
+        import asyncio
         bus = _fresh_bus()
         received: list[str] = []
 
@@ -200,12 +201,14 @@ class TestEventPublishingAcrossDivisions:
                 payload={"headline": "test", "sources": [{"name": "BBC"}, {"name": "Sky"}]},
                 state_snapshot={},
             ))
+            await asyncio.sleep(0.05)
         finally:
             bus_module._bus = original
 
         assert "intelligence_brief_ready" in received
 
     async def test_governance_publishes_approved_event(self) -> None:
+        import asyncio
         bus = _fresh_bus()
         received: list[str] = []
 
@@ -240,6 +243,7 @@ class TestEventPublishingAcrossDivisions:
                     }],
                 },
             ))
+            await asyncio.sleep(0.05)
         finally:
             bus_module._bus = original
 
