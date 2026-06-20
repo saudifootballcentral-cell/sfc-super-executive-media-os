@@ -1,0 +1,65 @@
+platforms:
+  tiktok:
+    max_chars: 150
+    hashtag_limit: 5
+    supports_video: true
+    max_video_duration_s: 60
+    aspect_ratio: "9:16"
+    primary_audience: "youth"
+
+  instagram_reels:
+    max_chars: 2200
+    hashtag_limit: 30
+    supports_video: true
+    max_video_duration_s: 90
+    aspect_ratio: "9:16"
+
+  instagram_stories:
+    max_chars: 200
+    supports_video: true
+    max_video_duration_s: 15
+    aspect_ratio: "9:16"
+
+  instagram_feed:
+    max_chars: 2200
+    hashtag_limit: 30
+    supports_video: false
+    image_dimensions: "1080x1080"
+
+  youtube_shorts:
+    max_chars: 500
+    supports_video: true
+    max_video_duration_s: 60
+    aspect_ratio: "9:16"
+
+  youtube:
+    max_chars: 5000
+    supports_video: true
+    min_video_duration_s: 60
+    aspect_ratio: "16:9"
+
+  x:
+    max_chars: 280
+    supports_video: true
+    thread_support: true
+
+  telegram:
+    max_chars: 4096
+    supports_video: true
+    supports_channels: true
+
+  whatsapp:
+    max_chars: 1024
+    supports_video: true
+    channel_mode: true
+
+  website:
+    max_chars: 100000
+    supports_video: false
+    supports_rich_text: true
+
+  newsletter:
+    max_chars: 50000
+    supports_video: false
+    supports_html: true
+    send_days: ["Tuesday", "Thursday"]

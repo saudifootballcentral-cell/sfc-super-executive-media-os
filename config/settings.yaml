@@ -1,0 +1,47 @@
+system:
+  name: "SFC Super Executive Media OS"
+  version: "1.0.0"
+  environment: "production"
+  log_level: "INFO"
+
+governance:
+  min_sources: 2
+  min_confidence_score: 85.0
+  min_brand_alignment_score: 70.0
+  max_risk_score_before_escalation: 50.0
+
+platforms:
+  enabled:
+    - tiktok
+    - instagram_reels
+    - instagram_stories
+    - instagram_feed
+    - youtube_shorts
+    - youtube
+    - x
+    - telegram
+    - whatsapp
+    - website
+    - newsletter
+
+content:
+  default_language: "ar"
+  secondary_language: "en"
+  max_concurrent_drafts: 50
+
+agentops:
+  health_check_interval_seconds: 60
+  cost_alert_threshold_usd: 100.0
+  quality_alert_threshold_approval_rate: 0.70
+
+memory:
+  working_memory_ttl_seconds: 3600
+  episodic_memory_max_entries: 10000
+
+ai_providers:
+  primary_llm: "claude"
+  fallback_llm: "openai"
+  video_primary: "veo"
+  video_fallback: "kling"
+  voice: "elevenlabs"
+  image: "internal"
