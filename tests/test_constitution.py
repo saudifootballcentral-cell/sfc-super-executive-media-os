@@ -1,230 +1,228 @@
-"""Tests that verify core constitutional rules are enforced by the OS."""
+"""Tests enforcing constitutional rules via the LangGraph governance node."""
 
 import asyncio
 import pytest
 
-from core.executive import SFCExecutive
-from core.models import (
-    ContentItem,
-    ContentStatus,
-    Division,
-    EventType,
-    OutputScores,
-    Platform,
-    Source,
-)
-from divisions.governance.division import GovernanceDivision, MINIMUM_CONFIDENCE, MINIMUM_SOURCES
+from sfc.core.constitution import get_governance_rules, load_constitution
+from sfc.graph.nodes.governance import governance_node, _review_draft
+from sfc.graph.state import SFCState, make_initial_state
 
 
 # ---------------------------------------------------------------------------
-# Fixtures
+# Constitution loader
 # ---------------------------------------------------------------------------
 
-@pytest.fixture
-def executive():
-    return SFCExecutive()
+class TestConstitutionLoader:
+    def test_load_constitution_returns_string(self):
+        text = load_constitution()
+        assert isinstance(text, str)
+        assert len(text) > 100
 
+    def test_constitution_contains_executive_identity(self):
+        text = load_constitution()
+        assert "SFC Super Executive" in text
 
-@pytest.fixture
-def governance(executive):
-    return executive.get_division(GovernanceDivision)
-
-
-def _make_content(
-    source_count: int = 2,
-    confidence: float = 90.0,
-    brand_alignment: float = 85.0,
-    status: ContentStatus = ContentStatus.DRAFT,
-) -> ContentItem:
-    sources = [Source(name=f"Source {i}", url=f"https://source{i}.com") for i in range(source_count)]
-    scores = OutputScores(
-        confidence_score=confidence,
-        risk_score=max(0.0, 100.0 - confidence),
-        source_count=source_count,
-        brand_alignment_score=brand_alignment,
-    )
-    return ContentItem(
-        title="Test Content",
-        body="Body text for test content.",
-        content_type="news_article",
-        platforms=[Platform.X],
-        status=status,
-        scores=scores,
-        sources=sources,
-        division=Division.EDITORIAL,
-    )
+    def test_governance_rules_thresholds(self):
+        rules = get_governance_rules()
+        assert rules["min_confidence_score"] == 85.0
+        assert rules["min_source_count"] == 2
+        assert rules["min_brand_alignment_score"] == 70.0
 
 
 # ---------------------------------------------------------------------------
-# Governance — Verification Policy
+# Governance — Verification Policy (min 2 sources)
 # ---------------------------------------------------------------------------
 
 class TestVerificationPolicy:
-    def test_content_with_two_sources_passes(self, governance):
-        content = _make_content(source_count=2, confidence=90.0)
-        review = governance.review_content(content)
-        assert review.approved
+    def _draft(self, source_count: int, confidence: float = 90.0) -> dict:
+        return {
+            "content_id": "test-001",
+            "title": "Test Article",
+            "body": "Test body",
+            "scores": {
+                "confidence_score": confidence,
+                "risk_score": 100.0 - confidence,
+                "source_count": source_count,
+                "brand_alignment_score": 85.0,
+            },
+            "is_rumor": False,
+            "rumor_label": None,
+            "platforms": ["x"],
+            "division": "editorial",
+        }
 
-    def test_content_with_one_source_fails(self, governance):
-        content = _make_content(source_count=1)
-        review = governance.review_content(content)
-        assert not review.approved
-        assert any("source" in r.lower() for r in review.reasons)
+    def _rules(self):
+        return get_governance_rules()
 
-    def test_content_with_zero_sources_fails(self, governance):
-        content = _make_content(source_count=0)
-        review = governance.review_content(content)
-        assert not review.approved
+    def test_two_sources_passes(self):
+        rules = self._rules()
+        review = _review_draft(self._draft(2), rules["min_confidence_score"],
+                               rules["min_source_count"], rules["min_brand_alignment_score"],
+                               rules["max_risk_score_before_escalation"])
+        assert review["approved"]
+
+    def test_one_source_fails(self):
+        rules = self._rules()
+        review = _review_draft(self._draft(1), rules["min_confidence_score"],
+                               rules["min_source_count"], rules["min_brand_alignment_score"],
+                               rules["max_risk_score_before_escalation"])
+        assert not review["approved"]
+        assert any("source" in r.lower() for r in review["reasons"])
+
+    def test_zero_sources_fails(self):
+        rules = self._rules()
+        review = _review_draft(self._draft(0), rules["min_confidence_score"],
+                               rules["min_source_count"], rules["min_brand_alignment_score"],
+                               rules["max_risk_score_before_escalation"])
+        assert not review["approved"]
 
 
 # ---------------------------------------------------------------------------
-# Governance — Confidence Policy
+# Governance — Confidence Policy (>= 85 required)
 # ---------------------------------------------------------------------------
 
 class TestConfidencePolicy:
-    def test_confidence_below_85_is_rejected_and_escalated(self, governance):
-        content = _make_content(confidence=70.0)
-        review = governance.review_content(content)
-        assert not review.approved
-        assert review.escalated
+    def _draft(self, confidence: float, source_count: int = 2) -> dict:
+        return {
+            "content_id": "test-002",
+            "title": "Confidence Test",
+            "body": "Body",
+            "scores": {
+                "confidence_score": confidence,
+                "risk_score": 100.0 - confidence,
+                "source_count": source_count,
+                "brand_alignment_score": 85.0,
+            },
+            "is_rumor": False,
+            "rumor_label": None,
+        }
 
-    def test_confidence_exactly_85_passes(self, governance):
-        content = _make_content(confidence=85.0)
-        review = governance.review_content(content)
-        assert review.approved
+    def _r(self):
+        return get_governance_rules()
 
-    def test_confidence_above_85_passes(self, governance):
-        content = _make_content(confidence=95.0)
-        review = governance.review_content(content)
-        assert review.approved
+    def test_confidence_84_rejected_and_escalated(self):
+        r = self._r()
+        review = _review_draft(self._draft(84.9), r["min_confidence_score"],
+                               r["min_source_count"], r["min_brand_alignment_score"],
+                               r["max_risk_score_before_escalation"])
+        assert not review["approved"]
+        assert review["escalated"]
 
-    def test_output_scores_escalation_flag(self):
-        scores = OutputScores(
-            confidence_score=84.9,
-            risk_score=15.1,
-            source_count=2,
-            brand_alignment_score=85.0,
-        )
-        assert scores.requires_escalation
+    def test_confidence_exactly_85_passes(self):
+        r = self._r()
+        review = _review_draft(self._draft(85.0), r["min_confidence_score"],
+                               r["min_source_count"], r["min_brand_alignment_score"],
+                               r["max_risk_score_before_escalation"])
+        assert review["approved"]
 
-    def test_output_scores_no_escalation_at_85(self):
-        scores = OutputScores(
-            confidence_score=85.0,
-            risk_score=15.0,
-            source_count=2,
-            brand_alignment_score=85.0,
-        )
-        assert not scores.requires_escalation
-
-
-# ---------------------------------------------------------------------------
-# Publishing Policy
-# ---------------------------------------------------------------------------
-
-class TestPublishingPolicy:
-    def test_unapproved_content_is_not_publishable(self):
-        content = _make_content(status=ContentStatus.DRAFT)
-        assert not content.is_publishable
-
-    def test_approved_content_with_good_scores_is_publishable(self):
-        content = _make_content(confidence=90.0, source_count=2, status=ContentStatus.APPROVED)
-        assert content.is_publishable
-
-    def test_approved_but_low_confidence_not_publishable(self):
-        content = _make_content(confidence=70.0, source_count=2, status=ContentStatus.APPROVED)
-        assert not content.is_publishable
-
-    def test_approved_but_one_source_not_publishable(self):
-        content = _make_content(confidence=90.0, source_count=1, status=ContentStatus.APPROVED)
-        assert not content.is_publishable
+    def test_confidence_100_passes(self):
+        r = self._r()
+        review = _review_draft(self._draft(100.0), r["min_confidence_score"],
+                               r["min_source_count"], r["min_brand_alignment_score"],
+                               r["max_risk_score_before_escalation"])
+        assert review["approved"]
 
 
 # ---------------------------------------------------------------------------
-# Event Bus
+# Governance — Rumor Policy
 # ---------------------------------------------------------------------------
 
-class TestEventBus:
-    def test_event_is_logged(self, executive):
-        async def run():
-            await executive.dispatch(
-                EventType.TREND_DETECTED,
-                source="test",
-                payload={"topic": "Al Hilal"},
-            )
-        asyncio.get_event_loop().run_until_complete(run())
-        assert len(executive.event_bus.event_log) > 0
+class TestRumorPolicy:
+    def _draft(self, is_rumor: bool, label: str | None) -> dict:
+        return {
+            "content_id": "rumor-001",
+            "title": "Rumor Test",
+            "body": "Body",
+            "scores": {
+                "confidence_score": 90.0,
+                "risk_score": 10.0,
+                "source_count": 2,
+                "brand_alignment_score": 85.0,
+            },
+            "is_rumor": is_rumor,
+            "rumor_label": label,
+        }
 
-    def test_event_status_processed(self, executive):
-        async def run():
-            return await executive.dispatch(
-                EventType.NEWS_DETECTED,
-                source="test",
-                payload={"headline": "Test News", "sources": [{"name": "s1"}, {"name": "s2"}]},
-            )
-        event = asyncio.get_event_loop().run_until_complete(run())
-        assert event.status == "processed"
+    def _r(self):
+        return get_governance_rules()
 
+    def test_unlabeled_rumor_rejected(self):
+        r = self._r()
+        review = _review_draft(self._draft(True, None), r["min_confidence_score"],
+                               r["min_source_count"], r["min_brand_alignment_score"],
+                               r["max_risk_score_before_escalation"])
+        assert not review["approved"]
+        assert any("rumor" in reason.lower() for reason in review["reasons"])
 
-# ---------------------------------------------------------------------------
-# Knowledge Graph
-# ---------------------------------------------------------------------------
+    def test_labeled_rumor_passes_other_checks(self):
+        r = self._r()
+        review = _review_draft(self._draft(True, "RUMOR — unconfirmed"),
+                               r["min_confidence_score"], r["min_source_count"],
+                               r["min_brand_alignment_score"], r["max_risk_score_before_escalation"])
+        assert review["approved"]
 
-class TestKnowledgeGraph:
-    def test_entity_can_be_added_and_retrieved(self, executive):
-        from core.knowledge_graph.entities import Entity, EntityType
-        player = Entity(entity_type=EntityType.PLAYER, name="Salem AlDossari")
-        executive.knowledge_graph.add_entity(player)
-        found = executive.knowledge_graph.find_by_name("Salem AlDossari")
-        assert found is not None
-        assert found.name == "Salem AlDossari"
-
-    def test_relationship_connects_entities(self, executive):
-        from core.knowledge_graph.entities import Entity, EntityType
-        from core.knowledge_graph.relationships import RelationshipType
-        kg = executive.knowledge_graph
-        player = Entity(entity_type=EntityType.PLAYER, name="Neymar")
-        club = Entity(entity_type=EntityType.CLUB, name="Al Hilal")
-        kg.add_entity(player)
-        kg.add_entity(club)
-        kg.relate(player.entity_id, RelationshipType.PLAYS_FOR, club.entity_id)
-        neighbors = kg.get_neighbors(player.entity_id)
-        assert any(n.name == "Al Hilal" for n in neighbors)
+    def test_non_rumor_always_allowed(self):
+        r = self._r()
+        review = _review_draft(self._draft(False, None), r["min_confidence_score"],
+                               r["min_source_count"], r["min_brand_alignment_score"],
+                               r["max_risk_score_before_escalation"])
+        assert review["approved"]
 
 
 # ---------------------------------------------------------------------------
-# Memory
+# Full governance node (async)
 # ---------------------------------------------------------------------------
 
-class TestWorkingMemory:
-    def test_context_created_and_released(self, executive):
-        wm = executive.working_memory
-        with wm.task_scope("test_task") as ctx:
-            ctx.set("key", "value")
-            assert ctx.get("key") == "value"
-            task_id = ctx.task_id
-        assert wm.get_task(task_id) is None
+@pytest.mark.asyncio
+class TestGovernanceNode:
+    def _state_with_drafts(self, drafts: list[dict]) -> dict:
+        state = make_initial_state("news", {"headline": "test"})
+        state["content_drafts"] = drafts
+        return state
 
-    def test_active_count_tracks_correctly(self, executive):
-        wm = executive.working_memory
-        ctx1 = wm.create_task("task_a")
-        ctx2 = wm.create_task("task_b")
-        assert wm.active_task_count == 2
-        wm.complete_task(ctx1.task_id)
-        assert wm.active_task_count == 1
-        wm.complete_task(ctx2.task_id)
-        assert wm.active_task_count == 0
+    async def test_all_approved_when_scores_good(self):
+        drafts = [
+            {
+                "content_id": f"c{i}",
+                "title": f"Article {i}",
+                "body": "body",
+                "platforms": ["x"],
+                "scores": {
+                    "confidence_score": 90.0,
+                    "risk_score": 10.0,
+                    "source_count": 3,
+                    "brand_alignment_score": 85.0,
+                },
+                "is_rumor": False,
+                "rumor_label": None,
+            }
+            for i in range(3)
+        ]
+        result = await governance_node(self._state_with_drafts(drafts))
+        assert len(result["approved_content"]) == 3
+        assert len(result["rejected_content"]) == 0
 
+    async def test_all_rejected_when_confidence_low(self):
+        drafts = [
+            {
+                "content_id": "low-conf",
+                "title": "Low confidence",
+                "body": "body",
+                "scores": {
+                    "confidence_score": 50.0,
+                    "risk_score": 50.0,
+                    "source_count": 2,
+                    "brand_alignment_score": 85.0,
+                },
+                "is_rumor": False,
+                "rumor_label": None,
+            }
+        ]
+        result = await governance_node(self._state_with_drafts(drafts))
+        assert len(result["rejected_content"]) == 1
+        assert len(result["approved_content"]) == 0
 
-class TestEpisodicMemory:
-    def test_lesson_is_recorded(self, executive):
-        em = executive.episodic_memory
-        em.record(
-            event="Transfer window opened",
-            decision="Activate war room",
-            result="Coverage increased 40%",
-            lesson="Early activation improves reach significantly",
-            division=Division.INTELLIGENCE,
-        )
-        lessons = em.get_lessons(Division.INTELLIGENCE)
-        assert len(lessons) >= 1
-        assert "Early activation" in lessons[-1]
+    async def test_empty_drafts_returns_empty(self):
+        result = await governance_node(self._state_with_drafts([]))
+        assert result["approved_content"] == []
+        assert result["rejected_content"] == []

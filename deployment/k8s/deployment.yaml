@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sfc-super-executive
+  namespace: sfc-media-os
+  labels:
+    app: sfc-super-executive
+    version: "1.0.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sfc-super-executive
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: sfc-super-executive
+        version: "1.0.0"
+    spec:
+      serviceAccountName: sfc-service-account
+
+      # Security context — run as non-root
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+
+      containers:
+        - name: sfc-app
+          image: sfc-media-os:1.0.0
+          imagePullPolicy: Always
+
+          envFrom:
+            - configMapRef:
+                name: sfc-config
+
+          env:
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sfc-secrets
+                  key: anthropic_api_key
+
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+
+          livenessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "from sfc.graph.graph import build_graph; build_graph()"
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            failureThreshold: 3
+
+          readinessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "from sfc.graph.graph import build_graph; build_graph()"
+            initialDelaySeconds: 15
+            periodSeconds: 30
+
+          volumeMounts:
+            - name: constitution
+              mountPath: /app/constitution
+              readOnly: true
+
+      volumes:
+        - name: constitution
+          configMap:
+            name: sfc-constitution
+
+      terminationGracePeriodSeconds: 30
+
+---
+# Redis for LangGraph checkpointing
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sfc-redis
+  namespace: sfc-media-os
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sfc-redis
+  template:
+    metadata:
+      labels:
+        app: sfc-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command: ["redis-server", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru"]
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          ports:
+            - containerPort: 6379

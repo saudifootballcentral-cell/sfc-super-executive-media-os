@@ -1,0 +1,83 @@
+version: "3.9"
+
+# ============================================================
+# SFC Super Executive Media OS — Docker Compose
+# Services: app | redis (checkpointing) | postgres (memory)
+# ============================================================
+
+services:
+
+  # ---- Main application ----
+  sfc-app:
+    build:
+      context: ../../
+      dockerfile: deployment/docker/Dockerfile
+      target: production
+    container_name: sfc-super-executive
+    env_file:
+      - ../../.env
+    environment:
+      SFC_ENVIRONMENT: production
+      SFC_LOG_LEVEL: INFO
+      SFC_LOG_FORMAT: json
+      REDIS_URL: redis://redis:6379/0
+      LANGGRAPH_CHECKPOINT_DB_URL: postgresql://sfc:${POSTGRES_PASSWORD:-sfc_secret}@postgres:5432/sfc_os
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../../src:/app/src:ro          # Mount source for development hot-reload
+      - ../../constitution:/app/constitution:ro
+    restart: unless-stopped
+    networks:
+      - sfc-network
+
+  # ---- Redis — LangGraph checkpointing + Working Memory ----
+  redis:
+    image: redis:7-alpine
+    container_name: sfc-redis
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - sfc-network
+
+  # ---- PostgreSQL — Episodic Memory + Global Memory persistence ----
+  postgres:
+    image: postgres:16-alpine
+    container_name: sfc-postgres
+    environment:
+      POSTGRES_DB: sfc_os
+      POSTGRES_USER: sfc
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sfc_secret}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sfc -d sfc_os"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - sfc-network
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  sfc-network:
+    driver: bridge

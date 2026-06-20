@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sfc-config
+  namespace: sfc-media-os
+data:
+  SFC_ENVIRONMENT: "production"
+  SFC_LOG_LEVEL: "INFO"
+  SFC_LOG_FORMAT: "json"
+  SFC_COST_ALERT_USD: "100.0"
+  REDIS_URL: "redis://sfc-redis:6379/0"

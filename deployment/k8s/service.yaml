@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sfc-super-executive
+  namespace: sfc-media-os
+spec:
+  selector:
+    app: sfc-super-executive
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sfc-redis
+  namespace: sfc-media-os
+spec:
+  selector:
+    app: sfc-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+  type: ClusterIP
