@@ -47,9 +47,12 @@ class EventBus:
         for handler in handlers:
             try:
                 loop = asyncio.get_running_loop()
-                loop.create_task(self._safe_call(handler, event))
+                if asyncio.iscoroutinefunction(handler):
+                    loop.create_task(self._safe_call(handler, event))
+                else:
+                    handler(event)
             except RuntimeError:
-                # No running event loop — call synchronously (test context)
+                # No running event loop
                 result = handler(event)
                 if asyncio.iscoroutine(result):
                     asyncio.run(result)

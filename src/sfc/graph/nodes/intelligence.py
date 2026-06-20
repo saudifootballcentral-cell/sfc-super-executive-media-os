@@ -39,13 +39,28 @@ async def intelligence_node(state: SFCState) -> dict[str, Any]:
     logger.info("[Intelligence] Starting research | task=%s", task_type)
 
     try:
-        # ----------------------------------------------------------------
-        # TODO Package 2: Replace with IntelligenceDivision implementation
-        # - Real web search / news API calls
-        # - Source reliability scoring
-        # - Rumor vs fact classification
-        # - Entity extraction (players, clubs, competitions)
-        # ----------------------------------------------------------------
+        # Package 2: Call IntelligenceService with fallback to stub logic
+        try:
+            from sfc.divisions.intelligence.service import IntelligenceService
+            from sfc.divisions.base import DivisionInput
+            service = IntelligenceService()
+            await service.initialize()
+            result = await service.execute(DivisionInput(
+                run_id=state.get("run_id", ""),
+                task_type=task_type,
+                payload=payload,
+                state_snapshot=dict(state),
+            ))
+            if result.success and result.data:
+                report_out = result.data.get("intelligence_report", {})
+                sources_out = result.data.get("verified_sources", [])
+                return {
+                    "intelligence_report": report_out,
+                    "verified_sources": sources_out,
+                    "pipeline_stage": "intelligence_complete",
+                }
+        except Exception as svc_exc:
+            logger.warning("[Intelligence] Service call failed, using stub: %s", svc_exc)
 
         verified_sources = _gather_sources(payload)
         source_count = len(verified_sources)

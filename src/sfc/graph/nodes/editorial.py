@@ -45,13 +45,25 @@ async def editorial_node(state: SFCState) -> dict[str, Any]:
                 task_type, plan.get("content_types", []))
 
     try:
-        # ----------------------------------------------------------------
-        # TODO Package 2: Replace with EditorialDivision implementation
-        # - Claude generates full article body via structured prompts
-        # - Tone and style calibrated per platform
-        # - SEO optimisation for website/YouTube
-        # - Arabic + English versions
-        # ----------------------------------------------------------------
+        # Package 2: Call EditorialService with fallback to stub logic
+        try:
+            from sfc.divisions.editorial.service import EditorialService
+            from sfc.divisions.base import DivisionInput
+            service = EditorialService()
+            await service.initialize()
+            result = await service.execute(DivisionInput(
+                run_id=state.get("run_id", ""),
+                task_type=task_type,
+                payload=payload,
+                state_snapshot=dict(state),
+            ))
+            if result.success and result.data.get("content_drafts"):
+                return {
+                    "content_drafts": result.data["content_drafts"],
+                    "pipeline_stage": "editorial_complete",
+                }
+        except Exception as svc_exc:
+            logger.warning("[Editorial] Service call failed, using stub: %s", svc_exc)
 
         content_types = plan.get("content_types", ["article"])
         platforms_targeted = plan.get("platforms_targeted", [])

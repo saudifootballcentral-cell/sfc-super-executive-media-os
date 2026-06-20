@@ -65,12 +65,26 @@ async def publishing_node(state: SFCState) -> dict[str, Any]:
         }
 
     try:
-        # ----------------------------------------------------------------
-        # TODO Package 2: Replace with PublishingDivision implementation
-        # - Real TikTok, Instagram, YouTube, X, Telegram API calls
-        # - Scheduling / optimal-time posting
-        # - Revenue signal integration (sponsored content markers)
-        # ----------------------------------------------------------------
+        # Package 2: Call PublishingService with fallback to stub logic
+        try:
+            from sfc.divisions.publishing.service import PublishingService
+            from sfc.divisions.base import DivisionInput
+            service = PublishingService()
+            await service.initialize()
+            result = await service.execute(DivisionInput(
+                run_id=state.get("run_id", ""),
+                task_type=state.get("task_type", "news"),
+                payload=state.get("task_payload", {}),
+                state_snapshot=dict(state),
+            ))
+            if result.success:
+                return {
+                    "publish_queue": result.data.get("publish_queue", []),
+                    "publish_results": result.data.get("publish_results", {}),
+                    "pipeline_stage": "publishing_complete",
+                }
+        except Exception as svc_exc:
+            logger.warning("[Publishing] Service call failed, using stub: %s", svc_exc)
 
         publish_queue: list[dict[str, Any]] = []
         platform_results: dict[str, list[dict[str, Any]]] = {}

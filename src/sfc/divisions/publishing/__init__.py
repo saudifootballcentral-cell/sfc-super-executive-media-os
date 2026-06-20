@@ -1,3 +1,7 @@
-"""Publishing Division stub — ready for Package 2 implementation."""
-from sfc.divisions.publishing.stub import PublishingDivision
-__all__ = ["PublishingDivision"]
+"""Publishing Division."""
+
+from __future__ import annotations
+
+from sfc.divisions.publishing.service import PublishingService
+
+__all__ = ["PublishingService"]

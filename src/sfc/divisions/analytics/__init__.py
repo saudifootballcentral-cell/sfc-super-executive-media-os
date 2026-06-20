@@ -1,3 +1,7 @@
-"""Analytics Division stub — ready for Package 2 implementation."""
-from sfc.divisions.analytics.stub import AnalyticsDivision
-__all__ = ["AnalyticsDivision"]
+"""Analytics Division."""
+
+from __future__ import annotations
+
+from sfc.divisions.analytics.service import AnalyticsService
+
+__all__ = ["AnalyticsService"]

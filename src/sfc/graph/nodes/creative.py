@@ -66,13 +66,25 @@ async def creative_node(state: SFCState) -> dict[str, Any]:
         return {"creative_assets": [], "warnings": ["CREATIVE: No drafts to process"]}
 
     try:
-        # ----------------------------------------------------------------
-        # TODO Package 2: Replace with CreativeDivision implementation
-        # - Real AI video generation via Veo/Kling/Runway/Luma
-        # - Real thumbnail generation
-        # - ElevenLabs voiceover generation
-        # - Graphic design via internal brand templates
-        # ----------------------------------------------------------------
+        # Package 2: Call CreativeService with fallback to stub logic
+        try:
+            from sfc.divisions.creative.service import CreativeService
+            from sfc.divisions.base import DivisionInput
+            service = CreativeService()
+            await service.initialize()
+            result = await service.execute(DivisionInput(
+                run_id=state.get("run_id", ""),
+                task_type=state.get("task_type", "news"),
+                payload=state.get("task_payload", {}),
+                state_snapshot=dict(state),
+            ))
+            if result.success:
+                return {
+                    "creative_assets": result.data.get("creative_assets", []),
+                    "pipeline_stage": "creative_complete",
+                }
+        except Exception as svc_exc:
+            logger.warning("[Creative] Service call failed, using stub: %s", svc_exc)
 
         assets: list[dict[str, Any]] = []
 

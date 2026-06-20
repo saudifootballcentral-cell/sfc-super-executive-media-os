@@ -35,6 +35,7 @@ from sfc.graph.nodes.learning import learning_node
 from sfc.graph.nodes.memory_update import memory_update_node
 from sfc.graph.nodes.planning import planning_node
 from sfc.graph.nodes.publishing import publishing_node
+from sfc.graph.nodes.strategic_planning import strategic_planning_node
 from sfc.graph.nodes.super_executive import super_executive_node
 from sfc.graph.state import SFCState
 
@@ -59,6 +60,7 @@ def build_graph(checkpointer: Any = None) -> SFCGraph:
     # -----------------------------------------------------------------------
     builder.add_node("super_executive", super_executive_node)
     builder.add_node("planning", planning_node)          # includes async background tasks
+    builder.add_node("strategic_planning", strategic_planning_node)  # Package 2: enriches plan
     builder.add_node("intelligence", intelligence_node)
     builder.add_node("editorial", editorial_node)
     builder.add_node("creative", creative_node)
@@ -79,7 +81,8 @@ def build_graph(checkpointer: Any = None) -> SFCGraph:
         {"planning": "planning", END: END},
     )
 
-    builder.add_edge("planning", "intelligence")
+    builder.add_edge("planning", "strategic_planning")
+    builder.add_edge("strategic_planning", "intelligence")
     builder.add_edge("intelligence", "editorial")
     builder.add_edge("editorial", "creative")
     builder.add_edge("creative", "governance")
@@ -103,7 +106,7 @@ def build_graph(checkpointer: Any = None) -> SFCGraph:
         compile_kwargs["checkpointer"] = checkpointer
 
     graph = builder.compile(**compile_kwargs)
-    logger.info("[Graph] SFC pipeline compiled — 10 nodes")
+    logger.info("[Graph] SFC pipeline compiled — 11 nodes")
     return graph
 
 
@@ -125,6 +128,11 @@ SFC SUPER EXECUTIVE MEDIA OS — LANGGRAPH PIPELINE
 │ planning │  ← Execution plan + parallel background work via asyncio.gather():
 └──────────┘    • analytics_background  (historical benchmarks)
      │          • revenue_background    (sponsor signals)
+     ▼
+┌──────────────────┐
+│strategic_planning│  ← ICE scoring, annual/weekly plans (Package 2)
+└──────────────────┘
+     │
      ▼
 ┌─────────────┐
 │ intelligence│  ← Source gathering, verification, confidence scoring

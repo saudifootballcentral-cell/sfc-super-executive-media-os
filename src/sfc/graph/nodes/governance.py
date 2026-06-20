@@ -44,6 +44,28 @@ async def governance_node(state: SFCState) -> dict[str, Any]:
 
     logger.info("[Governance] Reviewing %d draft(s)", len(content_drafts))
 
+    # Package 2: Try GovernanceService first, fall through to inline logic on failure
+    try:
+        from sfc.divisions.governance.service import GovernanceService
+        from sfc.divisions.base import DivisionInput
+        service = GovernanceService()
+        await service.initialize()
+        result = await service.execute(DivisionInput(
+            run_id=state.get("run_id", ""),
+            task_type=state.get("task_type", "news"),
+            payload=state.get("task_payload", {}),
+            state_snapshot=dict(state),
+        ))
+        if result.success:
+            return {
+                "governance_reviews": result.data.get("governance_reviews", []),
+                "approved_content": result.data.get("approved_content", []),
+                "rejected_content": result.data.get("rejected_content", []),
+                "pipeline_stage": "governance_complete",
+            }
+    except Exception as svc_exc:
+        logger.warning("[Governance] Service call failed, using inline logic: %s", svc_exc)
+
     approved: list[dict[str, Any]] = []
     rejected: list[dict[str, Any]] = []
     reviews: list[dict[str, Any]] = []

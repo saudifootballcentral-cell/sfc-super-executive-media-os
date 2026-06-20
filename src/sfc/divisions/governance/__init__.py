@@ -1,3 +1,7 @@
-"""Governance Division stub — ready for Package 2 implementation."""
-from sfc.divisions.governance.stub import GovernanceDivision
-__all__ = ["GovernanceDivision"]
+"""Governance Division."""
+
+from __future__ import annotations
+
+from sfc.divisions.governance.service import GovernanceService
+
+__all__ = ["GovernanceService"]

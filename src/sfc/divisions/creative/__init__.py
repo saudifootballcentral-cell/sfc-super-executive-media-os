@@ -1,3 +1,7 @@
-"""Creative Division stub — ready for Package 2 implementation."""
-from sfc.divisions.creative.stub import CreativeDivision
-__all__ = ["CreativeDivision"]
+"""Creative Division."""
+
+from __future__ import annotations
+
+from sfc.divisions.creative.service import CreativeService
+
+__all__ = ["CreativeService"]

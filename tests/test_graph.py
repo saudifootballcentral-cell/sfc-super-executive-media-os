@@ -25,6 +25,7 @@ class TestGraphConstruction:
             "super_executive", "planning", "intelligence",
             "editorial", "creative", "governance",
             "publishing", "analytics", "learning", "memory_update",
+            "strategic_planning",
         ]:
             assert node in diagram, f"Node '{node}' missing from ASCII diagram"
 

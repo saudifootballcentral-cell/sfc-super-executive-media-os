@@ -1,3 +1,7 @@
-"""Revenue Division stub — ready for Package 2 implementation."""
-from sfc.divisions.revenue.stub import RevenueDivision
-__all__ = ["RevenueDivision"]
+"""Revenue Division."""
+
+from __future__ import annotations
+
+from sfc.divisions.revenue.service import RevenueService
+
+__all__ = ["RevenueService"]

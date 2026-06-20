@@ -105,12 +105,25 @@ async def analytics_node(state: SFCState) -> dict[str, Any]:
     logger.info("[Analytics:Final] Generating analytics report | published=%d", len(approved_content))
 
     try:
-        # ----------------------------------------------------------------
-        # TODO Package 2: Replace with AnalyticsDivision.final_report()
-        # - Real platform metrics via APIs (TikTok, Instagram, YouTube, etc.)
-        # - Attribution modeling
-        # - Cohort analysis
-        # ----------------------------------------------------------------
+        # Package 2: Call AnalyticsService with fallback to stub logic
+        try:
+            from sfc.divisions.analytics.service import AnalyticsService
+            from sfc.divisions.base import DivisionInput
+            service = AnalyticsService()
+            await service.initialize()
+            result = await service.execute(DivisionInput(
+                run_id=state.get("run_id", ""),
+                task_type=state.get("task_type", "news"),
+                payload=state.get("task_payload", {}),
+                state_snapshot=dict(state),
+            ))
+            if result.success and result.data.get("analytics_report"):
+                return {
+                    "analytics_report": result.data["analytics_report"],
+                    "pipeline_stage": "analytics_complete",
+                }
+        except Exception as svc_exc:
+            logger.warning("[Analytics] Service call failed, using stub: %s", svc_exc)
 
         benchmarks = background.get("benchmarks", {})
         kpi_targets = plan.get("kpi_targets", {})
