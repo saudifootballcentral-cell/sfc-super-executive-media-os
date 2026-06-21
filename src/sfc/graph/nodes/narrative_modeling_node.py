@@ -13,8 +13,7 @@ async def narrative_modeling_node(state: dict[str, Any]) -> dict[str, Any]:
     try:
         from sfc.narrative.modeling.service import get_narrative_modeling_service
         service = get_narrative_modeling_service()
-        context = state.get("context", {})
-        narrative_map = await service.build_narrative_map(context=context)
+        narrative_map = await service.build_narrative_map()
         return {
             "narrative_models": narrative_map.to_dict(),
             "pipeline_stage": "narrative_modeling",

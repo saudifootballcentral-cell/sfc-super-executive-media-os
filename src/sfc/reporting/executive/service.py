@@ -74,6 +74,15 @@ class ExecutiveReportService:
         wins, risks, opportunities = self._extract_insights(
             analytics, revenue_summary, governance_reviews, lessons
         )
+
+        # Fold Package 8B/8C social & narrative intelligence into the report
+        social_wins, social_risks, social_opps, social_section, merged_war_room = (
+            self._extract_social_intelligence(context, war_room_state)
+        )
+        wins.extend(social_wins)
+        risks.extend(social_risks)
+        opportunities.extend(social_opps)
+
         recommendations = self._build_recommendations(
             wins, risks, opportunities, cost_tracker_data
         )
@@ -89,7 +98,7 @@ class ExecutiveReportService:
             recommendations=recommendations,
             ai_usage=self._extract_ai_usage(ai_metrics, cost_tracker_data),
             cost_summary=cost_tracker_data,
-            war_room_summary=self._extract_war_room_summary(war_room_state),
+            war_room_summary=merged_war_room,
             persona_summary=self._extract_persona_summary(persona_outputs),
             revenue_summary=revenue_summary,
             governance_summary=self._extract_governance_summary(
@@ -100,6 +109,7 @@ class ExecutiveReportService:
             content_rejected=len(rejected_content),
             total_reach=analytics.get("estimated_reach", 0),
             total_revenue_opportunity_usd=float(revenue_summary.get("total_opportunity_usd", 0)),
+            sections=[social_section] if social_section is not None else [],
         )
 
         # AI-enhanced executive summary
@@ -250,6 +260,89 @@ class ExecutiveReportService:
             "fallback_rate_pct": round(fallback / total_calls * 100, 1) if total_calls > 0 else 0.0,
             "validation_failures": ai_metrics.get("validation_failures", 0),
         }
+
+    def _extract_social_intelligence(
+        self,
+        context: dict[str, Any],
+        war_room_state: dict[str, Any],
+    ) -> tuple[list[str], list[str], list[str], "ReportSection | None", dict[str, Any]]:
+        """Extract Package 8B/8C social & narrative intelligence outputs from pipeline state.
+
+        Returns (wins, risks, opportunities, section, merged_war_room_summary).
+        """
+        wins: list[str] = []
+        risks: list[str] = []
+        opps: list[str] = []
+
+        command_center = context.get("narrative_command_center", {})
+        narrative_risk = context.get("narrative_risk", {})
+        social_war_room = context.get("social_war_room_state", {})
+        trend_data = context.get("trend_radar_data", {})
+        opportunity_detections = context.get("opportunity_detections", [])
+        audience_segments = context.get("audience_segments", {})
+
+        total_narratives = command_center.get("total_narratives", 0)
+        total_audience = command_center.get("total_audience", 0)
+        escalations = command_center.get("war_room_escalations", [])
+        cc_summary = command_center.get("summary", "")
+
+        # Wins from social intelligence
+        if total_narratives and total_narratives > 0:
+            wins.append(f"Social intelligence: {total_narratives} active narratives tracked")
+        if total_audience and total_audience > 0:
+            wins.append(f"Audience intelligence: {total_audience:,} audience members modeled")
+        breaking = trend_data.get("breaking_trends", [])
+        if breaking:
+            wins.append(f"Trend radar: {len(breaking)} breaking trend(s) detected")
+
+        # Risks from narrative risk and war room
+        risk_score = narrative_risk.get("overall_risk_score", 0)
+        if risk_score >= 70:
+            risks.append(
+                f"Narrative risk score {risk_score:.0f}/100 — war room escalation required"
+            )
+        elif risk_score >= 50:
+            risks.append(f"Narrative risk score {risk_score:.0f}/100 — monitoring elevated")
+        if escalations:
+            risks.append(f"{len(escalations)} narrative war room escalation(s) pending review")
+        if social_war_room.get("activations"):
+            n = len(social_war_room["activations"])
+            risks.append(f"Social war room: {n} active incident(s) in progress")
+
+        # Opportunities from opportunity detection and segments
+        for det in opportunity_detections[:2]:
+            if isinstance(det, dict) and not det.get("error"):
+                top_opps = det.get("top_opportunities", [])
+                if top_opps:
+                    opps.append(f"Content opportunity detected: {top_opps[0].get('title', 'untitled')}")
+        fastest = audience_segments.get("fastest_growing")
+        if fastest:
+            opps.append(f"Fastest-growing audience segment: {fastest}")
+
+        # Build a dedicated section only when social intelligence data is present
+        section = None
+        if command_center or trend_data:
+            section = ReportSection(
+                title="Social & Narrative Intelligence (Package 8D)",
+                content=cc_summary or "Social and narrative intelligence scan completed.",
+                data={
+                    "total_narratives": total_narratives,
+                    "total_audience": total_audience,
+                    "war_room_escalations": len(escalations),
+                    "breaking_trends": len(breaking),
+                    "narrative_risk_score": risk_score,
+                    "opportunity_count": len(opportunity_detections),
+                },
+                priority="high" if escalations or risk_score >= 70 else "medium",
+            )
+
+        # Merge social war room activations into main war room summary
+        merged = self._extract_war_room_summary(war_room_state)
+        if social_war_room:
+            merged["social_war_room_activated"] = bool(social_war_room.get("activations"))
+            merged["social_incidents"] = len(social_war_room.get("activations", []))
+
+        return wins, risks, opps, section, merged
 
     def _extract_war_room_summary(self, ws: dict[str, Any]) -> dict[str, Any]:
         return {

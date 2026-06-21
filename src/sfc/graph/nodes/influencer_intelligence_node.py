@@ -36,7 +36,7 @@ async def influencer_intelligence_node(state: SFCState) -> dict[str, Any]:
         logger.info(
             "[InfluencerIntelligenceNode] Scan complete | tracked=%d new=%d",
             report.total_tracked,
-            len(report.new_influencers),
+            report.new_influencers,
         )
 
         return {
