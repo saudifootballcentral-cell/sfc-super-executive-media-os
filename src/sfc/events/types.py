@@ -87,6 +87,58 @@ class EscalationRequired(BaseEvent):
     event_type: str = "escalation_required"
 
 
+# ---------------------------------------------------------------------------
+# Package 8: Autonomous Reporting & Scheduled Operations events
+# ---------------------------------------------------------------------------
+
+class ScheduledJobCreated(BaseEvent):
+    event_type: str = "scheduled_job_created"
+
+
+class ScheduledJobStarted(BaseEvent):
+    event_type: str = "scheduled_job_started"
+
+
+class ScheduledJobCompleted(BaseEvent):
+    event_type: str = "scheduled_job_completed"
+
+
+class ScheduledJobFailed(BaseEvent):
+    event_type: str = "scheduled_job_failed"
+
+
+class ReportGenerated(BaseEvent):
+    event_type: str = "report_generated"
+
+
+class ReportDelivered(BaseEvent):
+    event_type: str = "report_delivered"
+
+
+class AutonomousTriggerFired(BaseEvent):
+    event_type: str = "autonomous_trigger_fired"
+
+
+class BatchJobStarted(BaseEvent):
+    event_type: str = "batch_job_started"
+
+
+class BatchJobCompleted(BaseEvent):
+    event_type: str = "batch_job_completed"
+
+
+class ForecastGenerated(BaseEvent):
+    event_type: str = "forecast_generated"
+
+
+class BudgetAlertTriggered(BaseEvent):
+    event_type: str = "budget_alert_triggered"
+
+
+class CycleCompleted(BaseEvent):
+    event_type: str = "cycle_completed"
+
+
 # Mapping from event_type string to class for deserialization
 EVENT_TYPE_MAP: dict[str, type[BaseEvent]] = {
     "opportunity_detected": OpportunityDetected,
@@ -105,4 +157,17 @@ EVENT_TYPE_MAP: dict[str, type[BaseEvent]] = {
     "content_draft_created": ContentDraftCreated,
     "asset_brief_created": AssetBriefCreated,
     "escalation_required": EscalationRequired,
+    # Package 8
+    "scheduled_job_created": ScheduledJobCreated,
+    "scheduled_job_started": ScheduledJobStarted,
+    "scheduled_job_completed": ScheduledJobCompleted,
+    "scheduled_job_failed": ScheduledJobFailed,
+    "report_generated": ReportGenerated,
+    "report_delivered": ReportDelivered,
+    "autonomous_trigger_fired": AutonomousTriggerFired,
+    "batch_job_started": BatchJobStarted,
+    "batch_job_completed": BatchJobCompleted,
+    "forecast_generated": ForecastGenerated,
+    "budget_alert_triggered": BudgetAlertTriggered,
+    "cycle_completed": CycleCompleted,
 }

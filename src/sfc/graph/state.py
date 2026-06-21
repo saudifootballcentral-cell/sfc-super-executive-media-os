@@ -117,6 +117,39 @@ class SFCState(TypedDict):
     ai_metrics: dict[str, Any]
 
     # -----------------------------------------------------------------------
+    # PACKAGE 8: AUTONOMOUS REPORTING & SCHEDULED OPERATIONS
+    # -----------------------------------------------------------------------
+
+    # NODE: scheduler_node
+    scheduler_state: dict[str, Any]
+
+    # NODE: autonomous_trigger_node
+    autonomous_triggers: list[dict[str, Any]]
+    trigger_report: dict[str, Any]
+
+    # NODE: executive_reporting_node
+    executive_report: dict[str, Any]
+
+    # NODE: operational_reporting_node
+    operational_reports: list[dict[str, Any]]
+
+    # NODE: historical_analytics_node
+    historical_analytics: dict[str, Any]
+
+    # NODE: cost_forecasting_node
+    cost_forecast: dict[str, Any]
+
+    # NODE: batch_processing_node
+    batch_results: list[dict[str, Any]]
+
+    # NODE: autonomous_execution_node
+    autonomous_execution_plan: dict[str, Any]
+
+    # NODE: report_delivery_node
+    delivery_log: list[dict[str, Any]]
+    delivery_stats: dict[str, Any]
+
+    # -----------------------------------------------------------------------
     # ACCUMULATED WITH REDUCERS (safe for parallel writes)
     # -----------------------------------------------------------------------
     errors: Annotated[list[str], operator.add]
@@ -160,6 +193,18 @@ def make_initial_state(
         persona_outputs=[],
         infrastructure_ready=False,
         ai_metrics={},
+        # Package 8: Autonomous Reporting & Scheduled Operations
+        scheduler_state={},
+        autonomous_triggers=[],
+        trigger_report={},
+        executive_report={},
+        operational_reports=[],
+        historical_analytics={},
+        cost_forecast={},
+        batch_results=[],
+        autonomous_execution_plan={},
+        delivery_log=[],
+        delivery_stats={},
         errors=[],
         warnings=[],
     )
