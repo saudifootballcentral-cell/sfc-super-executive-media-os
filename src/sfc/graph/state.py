@@ -96,6 +96,22 @@ class SFCState(TypedDict):
     memory_update_log: list[dict[str, Any]]
 
     # -----------------------------------------------------------------------
+    # NODE: war_room_router  (between super_executive and planning)
+    # -----------------------------------------------------------------------
+    war_room_state: dict[str, Any]
+
+    # -----------------------------------------------------------------------
+    # NODE: persona_layer  (between editorial and creative)
+    # -----------------------------------------------------------------------
+    active_personas: list[str]
+    persona_outputs: list[dict[str, Any]]
+
+    # -----------------------------------------------------------------------
+    # INFRASTRUCTURE
+    # -----------------------------------------------------------------------
+    infrastructure_ready: bool
+
+    # -----------------------------------------------------------------------
     # ACCUMULATED WITH REDUCERS (safe for parallel writes)
     # -----------------------------------------------------------------------
     errors: Annotated[list[str], operator.add]
@@ -134,6 +150,10 @@ def make_initial_state(
         analytics_report={},
         lessons_learned=[],
         memory_update_log=[],
+        war_room_state={},
+        active_personas=[],
+        persona_outputs=[],
+        infrastructure_ready=False,
         errors=[],
         warnings=[],
     )
