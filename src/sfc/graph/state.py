@@ -184,6 +184,43 @@ class SFCState(TypedDict):
     social_knowledge_snapshot: dict[str, Any]
 
     # -----------------------------------------------------------------------
+    # PACKAGE 8C: NARRATIVE INTELLIGENCE & AUDIENCE MODELING ENGINE
+    # -----------------------------------------------------------------------
+
+    # NODE: narrative_modeling_node
+    narrative_models: dict[str, Any]
+
+    # NODE: narrative_lifecycle_node
+    narrative_lifecycle: dict[str, Any]
+
+    # NODE: narrative_forecasting_node
+    narrative_forecast: dict[str, Any]
+
+    # NODE: narrative_risk_node
+    narrative_risk: dict[str, Any]
+
+    # NODE: audience_modeling_node
+    audience_models: dict[str, Any]
+
+    # NODE: audience_segmentation_node
+    audience_segments: dict[str, Any]
+
+    # NODE: audience_evolution_node
+    audience_evolution: dict[str, Any]
+
+    # NODE: influence_network_node
+    influence_network: dict[str, Any]
+
+    # NODE: reaction_simulator_node
+    reaction_forecast: dict[str, Any]
+
+    # NODE: narrative_strategy_node
+    narrative_strategy: dict[str, Any]
+
+    # NODE: narrative_command_center_node
+    narrative_command_center: dict[str, Any]
+
+    # -----------------------------------------------------------------------
     # ACCUMULATED WITH REDUCERS (safe for parallel writes)
     # -----------------------------------------------------------------------
     errors: Annotated[list[str], operator.add]
@@ -250,6 +287,18 @@ def make_initial_state(
         social_war_room_state={},
         opportunity_detections=[],
         social_knowledge_snapshot={},
+        # Package 8C: Narrative Intelligence & Audience Modeling Engine
+        narrative_models={},
+        narrative_lifecycle={},
+        narrative_forecast={},
+        narrative_risk={},
+        audience_models={},
+        audience_segments={},
+        audience_evolution={},
+        influence_network={},
+        reaction_forecast={},
+        narrative_strategy={},
+        narrative_command_center={},
         errors=[],
         warnings=[],
     )

@@ -179,6 +179,42 @@ class SocialWarRoomActivated(BaseEvent):
     event_type: str = "social_war_room_activated"
 
 
+# ---------------------------------------------------------------------------
+# Package 8C: Narrative Intelligence & Audience Modeling Engine events
+# ---------------------------------------------------------------------------
+
+class NarrativeForecastGenerated(BaseEvent):
+    event_type: str = "narrative_forecast_generated"
+
+
+class NarrativeRiskDetected(BaseEvent):
+    event_type: str = "narrative_risk_detected"
+
+
+class AudienceSegmentUpdated(BaseEvent):
+    event_type: str = "audience_segment_updated"
+
+
+class AudienceBehaviorChanged(BaseEvent):
+    event_type: str = "audience_behavior_changed"
+
+
+class InfluenceNetworkUpdated(BaseEvent):
+    event_type: str = "influence_network_updated"
+
+
+class ReactionSimulationCompleted(BaseEvent):
+    event_type: str = "reaction_simulation_completed"
+
+
+class NarrativeStrategyRecommended(BaseEvent):
+    event_type: str = "narrative_strategy_recommended"
+
+
+class NarrativeEscalationTriggered(BaseEvent):
+    event_type: str = "narrative_escalation_triggered"
+
+
 # Mapping from event_type string to class for deserialization
 EVENT_TYPE_MAP: dict[str, type[BaseEvent]] = {
     "opportunity_detected": OpportunityDetected,
@@ -220,4 +256,13 @@ EVENT_TYPE_MAP: dict[str, type[BaseEvent]] = {
     "influencer_detected": InfluencerDetected,
     "virality_forecast_generated": ViralityForecastGenerated,
     "social_war_room_activated": SocialWarRoomActivated,
+    # Package 8C
+    "narrative_forecast_generated": NarrativeForecastGenerated,
+    "narrative_risk_detected": NarrativeRiskDetected,
+    "audience_segment_updated": AudienceSegmentUpdated,
+    "audience_behavior_changed": AudienceBehaviorChanged,
+    "influence_network_updated": InfluenceNetworkUpdated,
+    "reaction_simulation_completed": ReactionSimulationCompleted,
+    "narrative_strategy_recommended": NarrativeStrategyRecommended,
+    "narrative_escalation_triggered": NarrativeEscalationTriggered,
 }
