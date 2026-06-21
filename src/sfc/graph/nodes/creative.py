@@ -86,6 +86,42 @@ async def creative_node(state: SFCState) -> dict[str, Any]:
         except Exception as svc_exc:
             logger.warning("[Creative] Service call failed, using stub: %s", svc_exc)
 
+        # Package 7: AI-generated creative brief concept
+        ai_creative_brief: dict[str, Any] = {}
+        try:
+            from sfc.ai.model_gateway import get_ai_gateway
+            from sfc.ai.models import ModelRequest
+            from sfc.ai.prompt_loader import get_prompt_loader
+            import json as _json
+
+            loader = get_prompt_loader()
+            system_prompt = loader.load("divisions", "creative")
+            gateway = get_ai_gateway()
+            first_draft = content_drafts[0] if content_drafts else {}
+            ai_request = ModelRequest(
+                task_type="creative",
+                system_prompt=system_prompt,
+                user_message=(
+                    f"Generate a creative brief for:\n"
+                    f"title={first_draft.get('title', '')}\n"
+                    f"content_type={first_draft.get('content_type', 'article')}\n"
+                    f"platforms={_json.dumps(plan.get('platforms_targeted', []))}\n\n"
+                    "Return JSON: {\"concept\": str, \"visual_direction\": str, "
+                    "\"key_elements\": list[str], \"color_palette\": list[str], "
+                    "\"format_specs\": dict}"
+                ),
+                max_tokens=1024,
+                json_mode=True,
+                output_schema="CreativeBriefAI",
+            )
+            ai_response = await gateway.complete(ai_request)
+            if ai_response.success and ai_response.parsed and not ai_response.used_fallback:
+                ai_creative_brief = ai_response.parsed
+                logger.debug("[Creative] AI brief generated: concept=%s",
+                           ai_creative_brief.get("concept", "")[:60])
+        except Exception as ai_exc:
+            logger.debug("[Creative] AI brief skipped: %s", ai_exc)
+
         assets: list[dict[str, Any]] = []
 
         for draft in content_drafts:
@@ -106,6 +142,7 @@ async def creative_node(state: SFCState) -> dict[str, Any]:
                             "body_preview": draft.get("body", "")[:150],
                             "is_rumor": draft.get("is_rumor", False),
                         },
+                        "creative_brief": ai_creative_brief if ai_creative_brief else {},
                         "status": "briefed",
                         "briefed_at": datetime.utcnow().isoformat(),
                     }

@@ -41,11 +41,17 @@ async def super_executive_node(state: SFCState) -> dict[str, Any]:
     """
     logger.info("[SuperExecutive] Analyzing task: %s | run_id=%s", state["task_type"], state["run_id"])
 
+    # Package 7: Try AI gateway first; fall back to direct Claude call; then deterministic fallback
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
 
+    decision = None
     if api_key:
-        decision = await _call_claude(state, api_key)
-    else:
+        decision = await _call_via_gateway(state)
+        if decision is None:
+            # Gateway failed — try direct Claude call as secondary fallback
+            decision = await _call_claude(state, api_key)
+
+    if decision is None:
         logger.warning("[SuperExecutive] No ANTHROPIC_API_KEY — using deterministic fallback decision")
         decision = _fallback_decision(state)
 
@@ -60,6 +66,64 @@ async def super_executive_node(state: SFCState) -> dict[str, Any]:
         "executive_decision": decision,
         "pipeline_stage": "executive_complete",
     }
+
+
+async def _call_via_gateway(state: SFCState) -> dict[str, Any] | None:
+    """Call AI gateway using ModelPolicy for executive task. Returns None on failure."""
+    try:
+        from sfc.ai.model_gateway import get_ai_gateway
+        from sfc.ai.models import ModelRequest
+        from sfc.ai.prompt_loader import get_prompt_loader
+
+        loader = get_prompt_loader()
+        system_prompt = loader.load_constitution()
+
+        task_brief = json.dumps(
+            {
+                "task_type": state["task_type"],
+                "payload": state["task_payload"],
+                "run_id": state["run_id"],
+                "timestamp": state["started_at"],
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+
+        request = ModelRequest(
+            task_type="executive",
+            system_prompt=system_prompt,
+            user_message=(
+                f"Analyze this incoming task and return your executive decision as JSON:\n\n"
+                f"{task_brief}\n\n"
+                "Return ONLY valid JSON matching the schema in your instructions."
+            ),
+            max_tokens=1024,
+            temperature=0.3,
+            json_mode=True,
+            output_schema="ExecutiveDecisionAI",
+        )
+
+        gateway = get_ai_gateway()
+        response = await gateway.complete(request)
+
+        if response.success and not response.used_fallback:
+            if response.parsed:
+                logger.info("[SuperExecutive] Gateway decision received (parsed)")
+                return response.parsed
+            # Try to parse from text
+            import re
+            raw = response.text.strip()
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+            decision = json.loads(raw.strip())
+            logger.info("[SuperExecutive] Gateway decision received (text)")
+            return decision
+
+    except Exception as exc:
+        logger.warning("[SuperExecutive] Gateway call failed: %s", exc)
+    return None
 
 
 async def _call_claude(state: SFCState, api_key: str) -> dict[str, Any]:

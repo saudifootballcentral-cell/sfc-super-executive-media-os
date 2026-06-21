@@ -92,6 +92,47 @@ async def learning_node(state: SFCState) -> dict[str, Any]:
             "No specific optimisations identified this run."
         )
 
+    # Package 7: AI extracts additional patterns and recommendations
+    try:
+        from sfc.ai.model_gateway import get_ai_gateway
+        from sfc.ai.models import ModelRequest
+        import json as _json
+
+        gateway = get_ai_gateway()
+        ai_request = ModelRequest(
+            task_type="learning",
+            system_prompt=(
+                "You are the Learning Engine for SFC Media OS. "
+                "Extract patterns and lessons from pipeline runs to improve future performance."
+            ),
+            user_message=(
+                f"Extract additional patterns and lessons from this pipeline run:\n"
+                f"task_type={task_type}\n"
+                f"existing_lessons={_json.dumps(lessons)}\n"
+                f"approved_count={len(approved_content)}\n"
+                f"rejected_count={len(rejected_content)}\n"
+                f"confidence={intelligence_report.get('confidence_score', 0)}\n\n"
+                "Return JSON: {\"lessons\": list[str], \"patterns\": list[str], "
+                "\"recommendations\": list[str]}"
+            ),
+            max_tokens=512,
+            json_mode=True,
+            output_schema="LearningExtractionAI",
+        )
+        ai_response = await gateway.complete(ai_request)
+        if ai_response.success and ai_response.parsed and not ai_response.used_fallback:
+            parsed = ai_response.parsed
+            # Extend lessons with any new AI-extracted lessons (avoid duplicates)
+            for lesson in parsed.get("lessons", []):
+                if lesson and lesson not in lessons:
+                    lessons.append(f"AI: {lesson}")
+            for rec in parsed.get("recommendations", [])[:2]:
+                if rec:
+                    lessons.append(f"RECOMMENDATION: {rec}")
+            logger.debug("[Learning] AI extracted %d additional patterns", len(parsed.get("patterns", [])))
+    except Exception as ai_exc:
+        logger.debug("[Learning] AI extraction skipped: %s", ai_exc)
+
     logger.info("[Learning] %d lesson(s) extracted", len(lessons))
 
     return {

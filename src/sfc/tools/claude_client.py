@@ -5,10 +5,13 @@ All Claude calls in the SFC system go through this client to ensure:
 - Cost tracking via AgentOps CostMonitor
 - Retry logic with exponential backoff
 - Structured JSON output enforcement
+
+Enhanced in Package 7: delegates to AIGateway when available.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -130,12 +133,70 @@ class ClaudeClient:
                     attempt + 1, max_retries, exc, wait,
                 )
                 if attempt < max_retries - 1:
-                    time.sleep(wait)
+                    await asyncio.sleep(wait)
                 else:
                     logger.error("[Claude] All %d attempts failed", max_retries)
                     raise
 
         raise RuntimeError("Claude client: exhausted retries")
+
+    async def async_complete(
+        self,
+        task_type: str,
+        system: str,
+        user_message: str,
+        max_tokens: int = 2048,
+        json_mode: bool = False,
+    ) -> dict[str, Any]:
+        """Delegate to AIGateway for AI completion.
+
+        This is the Package 7 enhanced path. Falls back to the direct
+        Claude call path if the gateway is unavailable.
+
+        Args:
+            task_type: Determines model selection via ModelPolicy
+            system: System prompt
+            user_message: User message content
+            max_tokens: Maximum response tokens
+            json_mode: If True, enforce JSON output
+
+        Returns:
+            dict with keys: text, model, input_tokens, output_tokens, cost_usd, parsed (opt)
+        """
+        try:
+            from sfc.ai.model_gateway import get_ai_gateway
+            from sfc.ai.models import ModelRequest
+
+            request = ModelRequest(
+                task_type=task_type,
+                system_prompt=system,
+                user_message=user_message,
+                max_tokens=max_tokens,
+                json_mode=json_mode,
+            )
+            gateway = get_ai_gateway()
+            response = await gateway.complete(request)
+
+            result: dict[str, Any] = {
+                "text": response.text,
+                "model": response.model,
+                "input_tokens": response.input_tokens,
+                "output_tokens": response.output_tokens,
+                "cost_usd": response.cost_usd,
+            }
+            if response.parsed:
+                result["parsed"] = response.parsed
+            return result
+
+        except Exception as exc:
+            logger.warning("[ClaudeClient] Gateway delegation failed: %s — using direct path", exc)
+            return await self.complete(
+                task_type=task_type,
+                system=system,
+                user_message=user_message,
+                max_tokens=max_tokens,
+                json_mode=json_mode,
+            )
 
     @staticmethod
     def _estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:

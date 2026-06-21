@@ -98,11 +98,45 @@ async def governance_node(state: SFCState) -> dict[str, Any]:
         len(approved), len(rejected), pass_rate,
     )
 
+    # Package 7: AI generates explanatory notes AFTER constitutional check.
+    # The code-based check result is ALWAYS authoritative — AI CANNOT override it.
+    ai_notes: dict[str, Any] = {}
+    try:
+        from sfc.ai.model_gateway import get_ai_gateway
+        from sfc.ai.models import ModelRequest
+        from sfc.ai.prompt_loader import get_prompt_loader
+        import json as _json
+
+        loader = get_prompt_loader()
+        system_prompt = loader.load("divisions", "governance")
+        gateway = get_ai_gateway()
+        ai_request = ModelRequest(
+            task_type="governance",
+            system_prompt=system_prompt,
+            user_message=(
+                f"The code-based constitutional compliance check is complete and FINAL.\n"
+                f"approved_count={len(approved)}, rejected_count={len(rejected)}\n"
+                f"rejection_reasons={_json.dumps([r.get('reasons', []) for r in reviews if not r.get('approved')])}\n\n"
+                "Generate ONLY explanatory notes and improvement suggestions. "
+                "Do NOT change any approval decisions. "
+                "Return JSON: {\"explanation\": str, \"suggestions\": list[str]}"
+            ),
+            max_tokens=512,
+            json_mode=True,
+        )
+        ai_response = await gateway.complete(ai_request)
+        if ai_response.success and ai_response.parsed and not ai_response.used_fallback:
+            ai_notes = ai_response.parsed
+            logger.debug("[Governance] AI explanatory notes generated")
+    except Exception as ai_exc:
+        logger.debug("[Governance] AI notes skipped: %s", ai_exc)
+
     return {
         "governance_reviews": reviews,
         "approved_content": approved,
         "rejected_content": rejected,
         "pipeline_stage": "governance_complete",
+        **({"ai_governance_notes": ai_notes} if ai_notes else {}),
     }
 
 

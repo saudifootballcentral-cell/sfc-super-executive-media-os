@@ -88,6 +88,41 @@ async def revenue_node(state: SFCState) -> dict[str, Any]:
                 "processed_at": datetime.utcnow().isoformat(),
             }
 
+        # Package 7: AI prioritizes revenue signals and identifies highest-value opportunities
+        ai_revenue_insights: dict[str, Any] = {}
+        try:
+            from sfc.ai.model_gateway import get_ai_gateway
+            from sfc.ai.models import ModelRequest
+            from sfc.ai.prompt_loader import get_prompt_loader
+            import json as _json
+
+            loader = get_prompt_loader()
+            system_prompt = loader.load("divisions", "revenue")
+            gateway = get_ai_gateway()
+            ai_request = ModelRequest(
+                task_type="revenue",
+                system_prompt=system_prompt,
+                user_message=(
+                    f"Analyze revenue signals and prioritize opportunities:\n"
+                    f"task_type={task_type}\n"
+                    f"revenue_summary={_json.dumps(revenue_summary)}\n"
+                    f"published_content_count={len(approved_content)}\n\n"
+                    "Return JSON: {\"revenue_insights\": str, \"top_opportunities\": list[str], "
+                    "\"priority_actions\": list[str]}"
+                ),
+                max_tokens=512,
+                json_mode=True,
+            )
+            ai_response = await gateway.complete(ai_request)
+            if ai_response.success and ai_response.parsed and not ai_response.used_fallback:
+                ai_revenue_insights = ai_response.parsed
+                logger.debug("[RevenueNode] AI revenue insights generated")
+        except Exception as ai_exc:
+            logger.debug("[RevenueNode] AI insights skipped: %s", ai_exc)
+
+        if ai_revenue_insights:
+            revenue_summary["ai_insights"] = ai_revenue_insights
+
         enriched_analytics = {
             **analytics_report,
             "revenue_summary": revenue_summary,

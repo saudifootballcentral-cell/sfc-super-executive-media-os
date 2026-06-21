@@ -28,6 +28,46 @@ async def strategic_planning_node(state: SFCState) -> dict[str, Any]:
 
     logger.info("[StrategicPlanning] Building execution plan | task=%s", task_type)
 
+    # Package 7: Try AI gateway enhancement first
+    try:
+        from sfc.ai.model_gateway import get_ai_gateway
+        from sfc.ai.models import ModelRequest
+        from sfc.ai.prompt_loader import get_prompt_loader
+        import json as _json
+
+        loader = get_prompt_loader()
+        system_prompt = loader.load("divisions", "strategic_planning")
+        gateway = get_ai_gateway()
+        request = ModelRequest(
+            task_type="strategic_planning",
+            system_prompt=system_prompt,
+            user_message=(
+                f"Build an execution plan for this task:\n"
+                f"task_type={task_type}\n"
+                f"decision={_json.dumps(decision, ensure_ascii=False)}\n"
+                f"payload={_json.dumps(payload, ensure_ascii=False)}\n\n"
+                "Return JSON with: divisions_required, platforms_targeted, content_types, "
+                "kpi_targets, parallel_tasks, sequential_tasks"
+            ),
+            max_tokens=1024,
+            json_mode=True,
+        )
+        ai_response = await gateway.complete(request)
+        if ai_response.success and ai_response.parsed and not ai_response.used_fallback:
+            ai_plan = ai_response.parsed
+            existing_plan = state.get("execution_plan", {})
+            ai_plan.setdefault("task_type", task_type)
+            ai_plan.setdefault("priority", decision.get("priority", "high"))
+            merged = {**existing_plan, **ai_plan}
+            logger.info("[StrategicPlanning] AI-enhanced plan built | divisions=%s",
+                       merged.get("divisions_required"))
+            return {
+                "execution_plan": merged,
+                "pipeline_stage": "strategic_planning_complete",
+            }
+    except Exception as ai_exc:
+        logger.debug("[StrategicPlanning] AI gateway skipped: %s", ai_exc)
+
     try:
         from sfc.divisions.base import DivisionInput
         from sfc.divisions.strategic_planning.service import StrategicPlanningService

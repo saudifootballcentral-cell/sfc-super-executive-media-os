@@ -90,6 +90,49 @@ async def intelligence_node(state: SFCState) -> dict[str, Any]:
             "researched_at": datetime.utcnow().isoformat(),
         }
 
+        # Package 7: Optionally enhance key_facts via AI gateway
+        # CRITICAL: verified_sources count NEVER inflated by AI
+        try:
+            from sfc.ai.model_gateway import get_ai_gateway
+            from sfc.ai.models import ModelRequest
+            from sfc.ai.prompt_loader import get_prompt_loader
+
+            loader = get_prompt_loader()
+            system_prompt = loader.load("divisions", "intelligence")
+            gateway = get_ai_gateway()
+            ai_request = ModelRequest(
+                task_type="intelligence",
+                system_prompt=system_prompt,
+                user_message=(
+                    f"Analyze this intelligence data and provide enhanced key facts and summary:\n"
+                    f"task_type={task_type}\n"
+                    f"key_facts={report['key_facts']}\n"
+                    f"confidence={confidence}\n"
+                    f"source_count={source_count} (DO NOT change this count)\n"
+                    f"is_rumor={is_rumor}\n\n"
+                    "Return JSON: {\"summary\": str, \"key_facts\": list[str], "
+                    "\"confidence_score\": float (use same as input), "
+                    "\"opportunity_detected\": bool}"
+                ),
+                max_tokens=512,
+                json_mode=True,
+                output_schema="IntelligenceReportAI",
+            )
+            ai_response = await gateway.complete(ai_request)
+            if ai_response.success and ai_response.parsed and not ai_response.used_fallback:
+                parsed = ai_response.parsed
+                # Only enrich key_facts and add summary — never modify source counts
+                if parsed.get("key_facts"):
+                    report["key_facts"] = parsed["key_facts"]
+                if parsed.get("summary"):
+                    report["ai_summary"] = parsed["summary"]
+                if parsed.get("opportunity_detected"):
+                    report["opportunity_detected"] = parsed["opportunity_detected"]
+                # CRITICAL: confidence_score and source_count are NEVER taken from AI
+                logger.debug("[Intelligence] AI enrichment applied (key_facts updated)")
+        except Exception as ai_exc:
+            logger.debug("[Intelligence] AI enhancement skipped: %s", ai_exc)
+
         logger.info(
             "[Intelligence] Research complete | sources=%d confidence=%.1f%%",
             source_count,

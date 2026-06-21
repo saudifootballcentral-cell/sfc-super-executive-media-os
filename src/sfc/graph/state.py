@@ -112,6 +112,11 @@ class SFCState(TypedDict):
     infrastructure_ready: bool
 
     # -----------------------------------------------------------------------
+    # AI METRICS (Package 7) — tracks AI usage per run
+    # -----------------------------------------------------------------------
+    ai_metrics: dict[str, Any]
+
+    # -----------------------------------------------------------------------
     # ACCUMULATED WITH REDUCERS (safe for parallel writes)
     # -----------------------------------------------------------------------
     errors: Annotated[list[str], operator.add]
@@ -154,6 +159,7 @@ def make_initial_state(
         active_personas=[],
         persona_outputs=[],
         infrastructure_ready=False,
+        ai_metrics={},
         errors=[],
         warnings=[],
     )

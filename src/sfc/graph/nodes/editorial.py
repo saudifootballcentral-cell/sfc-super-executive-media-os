@@ -72,18 +72,62 @@ async def editorial_node(state: SFCState) -> dict[str, Any]:
         key_facts = intel.get("key_facts", [])
         is_rumor = intel.get("is_rumor", False)
 
+        # Package 7: AI-enhanced first draft for primary content type
+        ai_title: str | None = None
+        ai_body: str | None = None
+        try:
+            from sfc.ai.model_gateway import get_ai_gateway
+            from sfc.ai.models import ModelRequest
+            from sfc.ai.prompt_loader import get_prompt_loader
+            import json as _json
+
+            loader = get_prompt_loader()
+            system_prompt = loader.load("divisions", "editorial")
+            gateway = get_ai_gateway()
+            ai_request = ModelRequest(
+                task_type="editorial",
+                system_prompt=system_prompt,
+                user_message=(
+                    f"Draft content for this story:\n"
+                    f"content_type={content_types[0] if content_types else 'article'}\n"
+                    f"key_facts={_json.dumps(key_facts)}\n"
+                    f"headline={payload.get('headline', '')}\n"
+                    f"is_rumor={is_rumor}\n"
+                    f"confidence={confidence}\n\n"
+                    "Return JSON: {\"title\": str, \"body\": str, \"content_type\": str, "
+                    "\"key_messages\": list[str], \"tone\": str, \"cta\": str}"
+                ),
+                max_tokens=2048,
+                json_mode=True,
+                output_schema="ContentDraftAI",
+            )
+            ai_response = await gateway.complete(ai_request)
+            if ai_response.success and ai_response.parsed and not ai_response.used_fallback:
+                parsed = ai_response.parsed
+                ai_title = parsed.get("title")
+                ai_body = parsed.get("body")
+                logger.debug("[Editorial] AI first draft generated")
+        except Exception as ai_exc:
+            logger.debug("[Editorial] AI draft skipped: %s", ai_exc)
+
         drafts: list[dict[str, Any]] = []
 
         for content_type in content_types:
             platforms_for_type = _select_platforms(content_type, platforms_targeted)
+            # Use AI-generated title/body for primary content type if available
+            is_first = len(drafts) == 0
+            draft_title = (ai_title if is_first and ai_title else None) or _generate_title(content_type, payload, intel)
+            draft_body = (ai_body if is_first and ai_body else None) or _generate_body(content_type, payload, intel, is_rumor)
+
             draft = {
                 "content_id": str(uuid.uuid4()),
-                "title": _generate_title(content_type, payload, intel),
-                "body": _generate_body(content_type, payload, intel, is_rumor),
+                "title": draft_title,
+                "body": draft_body,
                 "content_type": content_type,
                 "platforms": platforms_for_type,
                 "status": "draft",
                 "scores": {
+                    # CRITICAL: confidence_score and source_count come from intelligence — NOT AI
                     "confidence_score": confidence,
                     "risk_score": max(0.0, 100.0 - confidence),
                     "source_count": source_count,

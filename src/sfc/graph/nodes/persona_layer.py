@@ -176,6 +176,49 @@ async def persona_layer_node(state: SFCState) -> dict[str, Any]:
             len(enriched_drafts),
         )
 
+        # Package 7: AI synthesizes persona outputs into actionable insight
+        ai_persona_insight: str = ""
+        if persona_outputs:
+            try:
+                from sfc.ai.model_gateway import get_ai_gateway
+                from sfc.ai.models import ModelRequest
+                import json as _json
+
+                gateway = get_ai_gateway()
+                persona_summary = [
+                    {"persona": po.get("persona_name", po.get("persona_id")),
+                     "task_type": po.get("task_type")}
+                    for po in persona_outputs[:5]
+                ]
+                ai_request = ModelRequest(
+                    task_type="persona",
+                    system_prompt=(
+                        "You are a persona synthesis AI for SFC Media OS. "
+                        "Synthesize persona outputs into actionable content insights."
+                    ),
+                    user_message=(
+                        f"Synthesize these persona outputs into one actionable insight:\n"
+                        f"active_personas={_json.dumps(persona_summary)}\n"
+                        f"task_type={task_type}\n\n"
+                        "Return JSON: {\"insights\": str, \"recommendations\": list[str]}"
+                    ),
+                    max_tokens=512,
+                    json_mode=True,
+                )
+                ai_response = await gateway.complete(ai_request)
+                if ai_response.success and ai_response.parsed and not ai_response.used_fallback:
+                    ai_persona_insight = ai_response.parsed.get("insights", "")
+                    logger.debug("[PersonaLayer] AI synthesis: %s", ai_persona_insight[:60])
+            except Exception as ai_exc:
+                logger.debug("[PersonaLayer] AI synthesis skipped: %s", ai_exc)
+
+        # Add AI insight to content_drafts metadata (scores are NEVER modified)
+        if ai_persona_insight:
+            final_drafts = []
+            for draft in (enriched_drafts if enriched_drafts else content_drafts):
+                final_drafts.append({**draft, "persona_ai_insight": ai_persona_insight})
+            enriched_drafts = final_drafts
+
         return {
             "active_personas": active_personas,
             "persona_outputs": persona_outputs,
