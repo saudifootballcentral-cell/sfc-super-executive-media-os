@@ -139,6 +139,46 @@ class CycleCompleted(BaseEvent):
     event_type: str = "cycle_completed"
 
 
+# ---------------------------------------------------------------------------
+# Package 8B: Social Intelligence & Trend Analysis Engine events
+# ---------------------------------------------------------------------------
+
+class TrendPeaked(BaseEvent):
+    event_type: str = "trend_peaked"
+
+
+class TrendDeclined(BaseEvent):
+    event_type: str = "trend_declined"
+
+
+class NarrativeDetected(BaseEvent):
+    event_type: str = "narrative_detected"
+
+
+class NarrativeShiftDetected(BaseEvent):
+    event_type: str = "narrative_shift_detected"
+
+
+class SentimentUpdated(BaseEvent):
+    event_type: str = "sentiment_updated"
+
+
+class SentimentCrisisDetected(BaseEvent):
+    event_type: str = "sentiment_crisis_detected"
+
+
+class InfluencerDetected(BaseEvent):
+    event_type: str = "influencer_detected"
+
+
+class ViralityForecastGenerated(BaseEvent):
+    event_type: str = "virality_forecast_generated"
+
+
+class SocialWarRoomActivated(BaseEvent):
+    event_type: str = "social_war_room_activated"
+
+
 # Mapping from event_type string to class for deserialization
 EVENT_TYPE_MAP: dict[str, type[BaseEvent]] = {
     "opportunity_detected": OpportunityDetected,
@@ -170,4 +210,14 @@ EVENT_TYPE_MAP: dict[str, type[BaseEvent]] = {
     "forecast_generated": ForecastGenerated,
     "budget_alert_triggered": BudgetAlertTriggered,
     "cycle_completed": CycleCompleted,
+    # Package 8B
+    "trend_peaked": TrendPeaked,
+    "trend_declined": TrendDeclined,
+    "narrative_detected": NarrativeDetected,
+    "narrative_shift_detected": NarrativeShiftDetected,
+    "sentiment_updated": SentimentUpdated,
+    "sentiment_crisis_detected": SentimentCrisisDetected,
+    "influencer_detected": InfluencerDetected,
+    "virality_forecast_generated": ViralityForecastGenerated,
+    "social_war_room_activated": SocialWarRoomActivated,
 }

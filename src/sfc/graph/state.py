@@ -150,6 +150,40 @@ class SFCState(TypedDict):
     delivery_stats: dict[str, Any]
 
     # -----------------------------------------------------------------------
+    # PACKAGE 8B: SOCIAL INTELLIGENCE & TREND ANALYSIS ENGINE
+    # -----------------------------------------------------------------------
+
+    # NODE: social_intelligence_node (full scan orchestrator)
+    social_intelligence_report: dict[str, Any]
+
+    # NODE: trend_radar_node
+    trend_radar_data: dict[str, Any]
+
+    # NODE: narrative_intelligence_node
+    narrative_intelligence_data: dict[str, Any]
+
+    # NODE: fan_sentiment_node
+    fan_sentiment_data: dict[str, Any]
+
+    # NODE: influencer_intelligence_node
+    influencer_data: dict[str, Any]
+
+    # NODE: virality_prediction_node
+    virality_forecast: dict[str, Any]
+
+    # NODE: audience_intelligence_node
+    audience_intelligence_data: dict[str, Any]
+
+    # NODE: social_war_room_node
+    social_war_room_state: dict[str, Any]
+
+    # NODE: opportunity_detection_node
+    opportunity_detections: list[dict[str, Any]]
+
+    # Knowledge graph snapshot (updated by social_intelligence_node)
+    social_knowledge_snapshot: dict[str, Any]
+
+    # -----------------------------------------------------------------------
     # ACCUMULATED WITH REDUCERS (safe for parallel writes)
     # -----------------------------------------------------------------------
     errors: Annotated[list[str], operator.add]
@@ -205,6 +239,17 @@ def make_initial_state(
         autonomous_execution_plan={},
         delivery_log=[],
         delivery_stats={},
+        # Package 8B: Social Intelligence & Trend Analysis Engine
+        social_intelligence_report={},
+        trend_radar_data={},
+        narrative_intelligence_data={},
+        fan_sentiment_data={},
+        influencer_data={},
+        virality_forecast={},
+        audience_intelligence_data={},
+        social_war_room_state={},
+        opportunity_detections=[],
+        social_knowledge_snapshot={},
         errors=[],
         warnings=[],
     )
