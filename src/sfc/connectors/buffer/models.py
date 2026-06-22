@@ -16,14 +16,20 @@ class BufferPlatform(str, Enum):
     FACEBOOK = "facebook"
     TIKTOK = "tiktok"
     LINKEDIN = "linkedin"
+    X = "x"
+    YOUTUBE = "youtube"
 
 
 class BufferPostStatus(str, Enum):
     DRAFT = "draft"
+    QUEUED = "queued"
     SCHEDULED = "scheduled"
+    PUBLISHING = "publishing"
     SENT = "sent"
+    PUBLISHED = "published"
     FAILED = "failed"
     RETRYING = "retrying"
+    CANCELLED = "cancelled"
 
 
 class BufferPost(BaseModel):
@@ -99,6 +105,56 @@ class BufferMultiPlatformRequest(BaseModel):
     platforms: list[BufferPlatform] = Field(default_factory=list)
     scheduled_at: datetime | None = None
     hashtags: list[str] = Field(default_factory=list)
+
+    model_config = {"frozen": False}
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.model_dump(mode="json")
+
+
+class BufferProfile(BaseModel):
+    profile_id: str = ""
+    service: str = ""
+    formatted_service: str = ""
+    service_username: str = ""
+    formatted_username: str = ""
+    platform_key: str = ""
+    timezone: str = "UTC"
+
+    model_config = {"frozen": False}
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.model_dump(mode="json")
+
+
+class PublishRequest(BaseModel):
+    request_id: str = Field(default_factory=lambda: str(uuid4()))
+    content: str = ""
+    media_url: str = ""
+    media_type: str = "image"
+    platform: BufferPlatform = BufferPlatform.INSTAGRAM
+    profile_id: str = ""
+    scheduled_at: datetime | None = None
+    hashtags: list[str] = Field(default_factory=list)
+    governance_approved: bool = False
+    operator_approved: bool = False
+    rights_status: str = "owned"
+
+    model_config = {"frozen": False}
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.model_dump(mode="json")
+
+
+class MediaValidationResult(BaseModel):
+    valid: bool = False
+    media_url: str = ""
+    file_exists: bool = False
+    file_size_bytes: int = 0
+    checksum_ok: bool = False
+    governance_approved: bool = False
+    rights_approved: bool = False
+    error: str = ""
 
     model_config = {"frozen": False}
 

@@ -325,10 +325,34 @@ class WorkflowRunner:
             raise ApprovalDeniedError("Awaiting human operator approval — call grant_operator_approval()")
 
     async def _stage_analytics(self, ctx: RunContext) -> None:
-        """Aggregate post-publish analytics from connector graph state."""
+        """Aggregate post-publish analytics via AnalyticsSyncLayerService (Package 9C)."""
         connector_state = ctx.state.graph_states.get("publishing_connectors_graph", {})
         analytics_data = connector_state.get("analytics_data", {})
         ctx.state.artifacts["analytics"] = analytics_data
+
+        # Extract published content IDs from connector state for deep sync
+        youtube_ids = connector_state.get("youtube_video_ids", [])
+        x_tweet_ids = connector_state.get("x_tweet_ids", [])
+        buffer_posts = connector_state.get("buffer_posts", [])
+
+        try:
+            from sfc.analytics_sync.service import get_analytics_sync_service
+            sync_svc = get_analytics_sync_service()
+            sync_result = await sync_svc.sync(
+                run_id=ctx.run_id,
+                youtube_video_ids=youtube_ids or [],
+                x_tweet_ids=x_tweet_ids or [],
+                buffer_posts=buffer_posts or [],
+                period="daily",
+                feed_learning=True,
+            )
+            ctx.state.artifacts["analytics_sync"] = sync_result
+        except Exception as exc:
+            import logging
+            logging.getLogger("sfc.orchestration").warning(
+                "[WorkflowRunner] analytics_sync failed (non-fatal): %s", exc
+            )
+            ctx.state.warnings.append(f"analytics_sync: {exc}")
 
     async def _stage_reporting(self, ctx: RunContext) -> None:
         """Collect reporting artifacts from all graph runs."""

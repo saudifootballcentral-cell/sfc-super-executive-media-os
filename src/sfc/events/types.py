@@ -273,8 +273,20 @@ class XConversationDetected(BaseEvent):
     event_type: str = "x_conversation_detected"
 
 
+class BufferAuthenticated(BaseEvent):
+    event_type: str = "buffer_authenticated"
+
+
+class BufferProfilesLoaded(BaseEvent):
+    event_type: str = "buffer_profiles_loaded"
+
+
 class BufferPostCreated(BaseEvent):
     event_type: str = "buffer_post_created"
+
+
+class BufferPostScheduled(BaseEvent):
+    event_type: str = "buffer_post_scheduled"
 
 
 class BufferPostPublished(BaseEvent):
@@ -283,6 +295,38 @@ class BufferPostPublished(BaseEvent):
 
 class BufferPostFailed(BaseEvent):
     event_type: str = "buffer_post_failed"
+
+
+class BufferRateLimitHit(BaseEvent):
+    event_type: str = "buffer_rate_limit_hit"
+
+
+class BufferStatusUpdated(BaseEvent):
+    event_type: str = "buffer_status_updated"
+
+
+# ---------------------------------------------------------------------------
+# Package 9C: Analytics Sync Layer events
+# ---------------------------------------------------------------------------
+
+class AnalyticsRetrieved(BaseEvent):
+    event_type: str = "analytics_retrieved"
+
+
+class TopPerformerDetected(BaseEvent):
+    event_type: str = "top_performer_detected"
+
+
+class AudienceGrowthDetected(BaseEvent):
+    event_type: str = "audience_growth_detected"
+
+
+class LearningGenerated(BaseEvent):
+    event_type: str = "learning_generated"
+
+
+class OptimizationGenerated(BaseEvent):
+    event_type: str = "optimization_generated"
 
 
 # ---------------------------------------------------------------------------
@@ -431,9 +475,20 @@ EVENT_TYPE_MAP: dict[str, type[BaseEvent]] = {
     "x_post_published": XPostPublished,
     "x_thread_published": XThreadPublished,
     "x_conversation_detected": XConversationDetected,
+    "buffer_authenticated": BufferAuthenticated,
+    "buffer_profiles_loaded": BufferProfilesLoaded,
     "buffer_post_created": BufferPostCreated,
+    "buffer_post_scheduled": BufferPostScheduled,
     "buffer_post_published": BufferPostPublished,
     "buffer_post_failed": BufferPostFailed,
+    "buffer_rate_limit_hit": BufferRateLimitHit,
+    "buffer_status_updated": BufferStatusUpdated,
+    # Package 9C
+    "analytics_retrieved": AnalyticsRetrieved,
+    "top_performer_detected": TopPerformerDetected,
+    "audience_growth_detected": AudienceGrowthDetected,
+    "learning_generated": LearningGenerated,
+    "optimization_generated": OptimizationGenerated,
     # Package 10D
     "orchestration_started": OrchestrationStarted,
     "orchestration_completed": OrchestrationCompleted,
