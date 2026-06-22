@@ -235,6 +235,14 @@ class SFCState(TypedDict):
     content_packages: list[dict[str, Any]]
 
     # -----------------------------------------------------------------------
+    # Package 9A: MVP Publishing & Intelligence Connectors
+    # -----------------------------------------------------------------------
+    youtube_results: dict[str, Any]
+    x_results: dict[str, Any]
+    buffer_queue_state: dict[str, Any]
+    analytics_data: dict[str, Any]
+
+    # -----------------------------------------------------------------------
     # ACCUMULATED WITH REDUCERS (safe for parallel writes)
     # -----------------------------------------------------------------------
     errors: Annotated[list[str], operator.add]
@@ -324,6 +332,11 @@ def make_initial_state(
         asset_registry={},
         quality_reports=[],
         content_packages=[],
+        # Package 9A: Publishing & Intelligence Connectors
+        youtube_results={},
+        x_results={},
+        buffer_queue_state={},
+        analytics_data={},
         errors=[],
         warnings=[],
     )

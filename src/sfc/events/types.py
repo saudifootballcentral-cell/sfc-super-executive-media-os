@@ -248,6 +248,43 @@ class CreativeProductionCompleted(BaseEvent):
     event_type: str = "creative_production_completed"
 
 
+# Package 9A: Publishing & Intelligence Connector events
+class VideoPublished(BaseEvent):
+    event_type: str = "video_published"
+
+
+class AnalyticsUpdated(BaseEvent):
+    event_type: str = "analytics_updated"
+
+
+class ChannelGrowthUpdated(BaseEvent):
+    event_type: str = "channel_growth_updated"
+
+
+class XPostPublished(BaseEvent):
+    event_type: str = "x_post_published"
+
+
+class XThreadPublished(BaseEvent):
+    event_type: str = "x_thread_published"
+
+
+class XConversationDetected(BaseEvent):
+    event_type: str = "x_conversation_detected"
+
+
+class BufferPostCreated(BaseEvent):
+    event_type: str = "buffer_post_created"
+
+
+class BufferPostPublished(BaseEvent):
+    event_type: str = "buffer_post_published"
+
+
+class BufferPostFailed(BaseEvent):
+    event_type: str = "buffer_post_failed"
+
+
 # Mapping from event_type string to class for deserialization
 EVENT_TYPE_MAP: dict[str, type[BaseEvent]] = {
     "opportunity_detected": OpportunityDetected,
@@ -307,4 +344,14 @@ EVENT_TYPE_MAP: dict[str, type[BaseEvent]] = {
     "quality_review_completed": QualityReviewCompleted,
     "content_package_ready": ContentPackageReady,
     "creative_production_completed": CreativeProductionCompleted,
+    # Package 9A
+    "video_published": VideoPublished,
+    "analytics_updated": AnalyticsUpdated,
+    "channel_growth_updated": ChannelGrowthUpdated,
+    "x_post_published": XPostPublished,
+    "x_thread_published": XThreadPublished,
+    "x_conversation_detected": XConversationDetected,
+    "buffer_post_created": BufferPostCreated,
+    "buffer_post_published": BufferPostPublished,
+    "buffer_post_failed": BufferPostFailed,
 }
