@@ -14,6 +14,7 @@ from sfc.events.types import (
     OrchestrationCompleted,
     OrchestrationFailed,
     OrchestrationStarted,
+    StageCompleted,
     StageFailed,
     StageSkipped,
     StageStarted,
@@ -148,10 +149,23 @@ class WorkflowRunner:
 
         try:
             await self._dispatch_stage(stage, ctx)
+            state.mark_stage_completed(stage_name)
             rec = state.stages.get(stage_name)
             duration_ms = rec.duration_ms if rec else 0.0
-            state.mark_stage_completed(stage_name)
             ctx.audit.log_stage_complete(stage_name, duration_ms)
+            bus.publish(
+                StageCompleted(
+                    division="orchestration",
+                    run_id=state.run_id,
+                    payload={
+                        "stage": stage_name,
+                        "workflow_type": state.workflow_type.value,
+                        "duration_ms": duration_ms,
+                        "status": "completed",
+                        "output_summary": self._stage_output_summary(stage_name, ctx),
+                    },
+                )
+            )
             await ctx.checkpoint()
 
         except ApprovalDeniedError as exc:
@@ -218,6 +232,29 @@ class WorkflowRunner:
             await self._stage_run_graph(stage.graph, ctx)
         else:
             raise RuntimeError(f"No handler for stage '{stage.name}'")
+
+    # ------------------------------------------------------------------
+    # Output summary builder (payload for StageCompleted)
+    # ------------------------------------------------------------------
+
+    def _stage_output_summary(self, stage_name: str, ctx: RunContext) -> dict[str, Any]:
+        """Return a compact summary of what the stage produced."""
+        state = ctx.state
+        graph_key_map = {
+            "social_intelligence": "social_intelligence_graph",
+            "main_pipeline": "main_graph",
+            "creative_production": "creative_production_graph",
+            "publishing": "publishing_connectors_graph",
+        }
+        graph_key = graph_key_map.get(stage_name)
+        if graph_key:
+            gs = state.graph_states.get(graph_key, {})
+            return {
+                "approved_content_count": len(gs.get("approved_content", [])),
+                "error_count": len(gs.get("errors", [])),
+            }
+        rec = state.stages.get(stage_name)
+        return {"artifacts": list(rec.artifacts.keys()) if rec and rec.artifacts else []}
 
     # ------------------------------------------------------------------
     # Builtin stage implementations

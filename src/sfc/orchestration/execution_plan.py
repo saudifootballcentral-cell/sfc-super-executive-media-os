@@ -180,13 +180,21 @@ class ExecutionPlan:
         return self.dry_run and stage is not None and stage.skippable_in_dry_run
 
     def validate_dependencies(self) -> list[str]:
-        """Return list of dependency violations (empty = valid)."""
-        known = set()
-        errors = []
+        """Return list of dependency violations (empty = valid).
+
+        Only validates dependencies that are present in this workflow's stage list.
+        Cross-workflow dependencies (e.g., creative_production depending on main_pipeline
+        which is absent from CREATIVE_ONLY) are considered externally satisfied and ignored.
+        """
+        in_plan = {s.name for s in self._stages}
+        known: set[str] = set()
+        errors: list[str] = []
         for stage in self._stages:
             for dep in stage.depends_on:
-                if dep not in known:
-                    errors.append(f"Stage '{stage.name}' depends on '{dep}' which is not defined before it")
+                if dep in in_plan and dep not in known:
+                    errors.append(
+                        f"Stage '{stage.name}' depends on '{dep}' which is not defined before it"
+                    )
             known.add(stage.name)
         return errors
 
