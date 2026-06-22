@@ -43,11 +43,11 @@ class TestDataFreshnessScorer:
 
     def test_is_fresh_above_threshold(self):
         collected = self.now - timedelta(hours=6)
-        assert self.scorer.is_fresh(collected, threshold=50.0) is True
+        assert self.scorer.is_fresh(collected, threshold=50.0, now=self.now) is True
 
     def test_is_fresh_below_threshold(self):
         collected = self.now - timedelta(hours=18)
-        assert self.scorer.is_fresh(collected, threshold=50.0) is False
+        assert self.scorer.is_fresh(collected, threshold=50.0, now=self.now) is False
 
     def test_ttl_just_collected_is_max(self):
         collected = self.now

@@ -20,8 +20,8 @@ class DataFreshnessScorer:
             return 0.0
         return round(100.0 * (1.0 - age_seconds / self._max_age_seconds), 2)
 
-    def is_fresh(self, collected_at: datetime, threshold: float = 50.0) -> bool:
-        return self.score(collected_at) >= threshold
+    def is_fresh(self, collected_at: datetime, threshold: float = 50.0, now: datetime | None = None) -> bool:
+        return self.score(collected_at, now=now) >= threshold
 
     def ttl_seconds(self, collected_at: datetime, now: datetime | None = None) -> float:
         """Seconds remaining before data is considered fully stale."""
