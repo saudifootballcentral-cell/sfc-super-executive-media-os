@@ -215,6 +215,39 @@ class NarrativeEscalationTriggered(BaseEvent):
     event_type: str = "narrative_escalation_triggered"
 
 
+# Package 8E: Creative Production Layer events
+class ProductionPlanCreated(BaseEvent):
+    event_type: str = "production_plan_created"
+
+
+class ImageAssetsGenerated(BaseEvent):
+    event_type: str = "image_assets_generated"
+
+
+class VideoAssetsGenerated(BaseEvent):
+    event_type: str = "video_assets_generated"
+
+
+class ShortsPackageGenerated(BaseEvent):
+    event_type: str = "shorts_package_generated"
+
+
+class PodcastEpisodeGenerated(BaseEvent):
+    event_type: str = "podcast_episode_generated"
+
+
+class QualityReviewCompleted(BaseEvent):
+    event_type: str = "quality_review_completed"
+
+
+class ContentPackageReady(BaseEvent):
+    event_type: str = "content_package_ready"
+
+
+class CreativeProductionCompleted(BaseEvent):
+    event_type: str = "creative_production_completed"
+
+
 # Mapping from event_type string to class for deserialization
 EVENT_TYPE_MAP: dict[str, type[BaseEvent]] = {
     "opportunity_detected": OpportunityDetected,
@@ -265,4 +298,13 @@ EVENT_TYPE_MAP: dict[str, type[BaseEvent]] = {
     "reaction_simulation_completed": ReactionSimulationCompleted,
     "narrative_strategy_recommended": NarrativeStrategyRecommended,
     "narrative_escalation_triggered": NarrativeEscalationTriggered,
+    # Package 8E
+    "production_plan_created": ProductionPlanCreated,
+    "image_assets_generated": ImageAssetsGenerated,
+    "video_assets_generated": VideoAssetsGenerated,
+    "shorts_package_generated": ShortsPackageGenerated,
+    "podcast_episode_generated": PodcastEpisodeGenerated,
+    "quality_review_completed": QualityReviewCompleted,
+    "content_package_ready": ContentPackageReady,
+    "creative_production_completed": CreativeProductionCompleted,
 }

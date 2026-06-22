@@ -221,6 +221,20 @@ class SFCState(TypedDict):
     narrative_command_center: dict[str, Any]
 
     # -----------------------------------------------------------------------
+    # Package 8E: Creative Production Layer
+    # -----------------------------------------------------------------------
+    production_plan: dict[str, Any]
+    image_assets: list[dict[str, Any]]
+    video_assets: list[dict[str, Any]]
+    thumbnail_assets: list[dict[str, Any]]
+    audio_assets: list[dict[str, Any]]
+    shorts_packages: list[dict[str, Any]]
+    podcast_episodes: list[dict[str, Any]]
+    asset_registry: dict[str, Any]
+    quality_reports: list[dict[str, Any]]
+    content_packages: list[dict[str, Any]]
+
+    # -----------------------------------------------------------------------
     # ACCUMULATED WITH REDUCERS (safe for parallel writes)
     # -----------------------------------------------------------------------
     errors: Annotated[list[str], operator.add]
@@ -299,6 +313,17 @@ def make_initial_state(
         reaction_forecast={},
         narrative_strategy={},
         narrative_command_center={},
+        # Package 8E: Creative Production Layer
+        production_plan={},
+        image_assets=[],
+        video_assets=[],
+        thumbnail_assets=[],
+        audio_assets=[],
+        shorts_packages=[],
+        podcast_episodes=[],
+        asset_registry={},
+        quality_reports=[],
+        content_packages=[],
         errors=[],
         warnings=[],
     )
