@@ -46,11 +46,10 @@ class LearningIntegration:
         aggregations: dict[str, list[AggregatedPerformance]],
         run_id: str = "",
     ) -> None:
-        """Persist analytics to GlobalMemory and DivisionMemory."""
+        """Persist analytics to MemoryManagerService via InfrastructureContext."""
         try:
-            from sfc.infrastructure.memory.service import get_memory_manager
-            memory = get_memory_manager()
-            # Store raw snapshot
+            from sfc.infrastructure.context import get_infrastructure
+            memory = get_infrastructure().memory_manager
             await memory.store(
                 namespace="analytics_sync",
                 key=f"run_{run_id}_records",
@@ -61,7 +60,6 @@ class LearningIntegration:
                 },
                 division="analytics",
             )
-            # Store aggregations
             for dim, aggs in aggregations.items():
                 await memory.store(
                     namespace="analytics_sync",
@@ -95,6 +93,7 @@ class LearningIntegration:
                             "run_id": run_id,
                         },
                     )
+            logger.debug("[Learning] KG updated with %d performance entities", len(records))
         except Exception as exc:
             logger.warning("[Learning] Knowledge graph update failed: %s", exc)
 

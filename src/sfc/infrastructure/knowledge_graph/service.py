@@ -347,3 +347,9 @@ class KnowledgeGraphService:
                 metrics={},
                 errors=[str(exc)],
             )
+
+
+def get_knowledge_graph() -> KnowledgeGraphService:
+    """Return the process-wide KnowledgeGraphService from InfrastructureContext."""
+    from sfc.infrastructure.context import get_infrastructure  # lazy — avoids circular import
+    return get_infrastructure().knowledge_graph
