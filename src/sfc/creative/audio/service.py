@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import random
 from typing import Any
 
@@ -67,6 +68,27 @@ class AudioFactoryService:
         provider = self._select_provider(language)
         quality = round(random.uniform(85, 97), 1)
 
+        # Default mock URL for planning / dry-run mode
+        file_url = f"https://assets.sfc.sa/audio/mock/{audio_type.value}_{language.value}.mp3"
+
+        use_real = os.environ.get("GENERATE_REAL_ASSETS", "false").lower() == "true"
+        if use_real:
+            from sfc.creative.providers.audio_providers import get_audio_provider_chain
+            from sfc.creative.providers.generated_asset import GeneratedAssetStatus
+            chain = get_audio_provider_chain()
+            generated = await chain.synthesize(
+                script=script,
+                voice_id=self._VOICE_IDS.get(language, ""),
+                language=language.value,
+            )
+            if generated.status == GeneratedAssetStatus.GENERATED:
+                file_url = generated.local_path
+                quality = generated.quality_score
+                provider = AudioProvider(generated.provider) if generated.provider in [p.value for p in AudioProvider] else provider
+            else:
+                # Provider unavailable — no real file
+                file_url = ""
+
         asset = AudioAsset(
             audio_type=audio_type,
             provider=provider,
@@ -75,7 +97,7 @@ class AudioFactoryService:
             script=script,
             voice_id=self._VOICE_IDS.get(language, "default_voice"),
             duration_seconds=duration,
-            file_url=f"https://assets.sfc.sa/audio/mock/{audio_type.value}_{language.value}.mp3",
+            file_url=file_url,
             platform=platform,
             quality_score=quality,
             word_count=word_count,

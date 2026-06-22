@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import random
 from typing import Any
 
@@ -61,7 +62,7 @@ class ImageFactoryService:
         """Generate an image asset with multiple variants."""
         context = context or {}
         prompts = await self._build_prompts(title, subject, image_format, context)
-        variants = self._generate_variants(prompts, image_format, num_variants)
+        variants = await self._generate_variants(prompts, image_format, num_variants)
         primary = variants[0].variant_id if variants else ""
         brand_score = sum(v.brand_alignment_score for v in variants) / max(len(variants), 1)
 
@@ -157,30 +158,51 @@ class ImageFactoryService:
                 pass
         return [base, alt]
 
-    def _generate_variants(
+    async def _generate_variants(
         self,
         prompts: list[str],
         image_format: ImageFormat,
         num_variants: int,
     ) -> list[ImageVariant]:
-        providers = [ImageProvider.FLUX, ImageProvider.IDEOGRAM, ImageProvider.GPT_IMAGE]
+        _provider_order = [ImageProvider.FLUX, ImageProvider.IDEOGRAM, ImageProvider.GPT_IMAGE]
         dimensions = {
             ImageFormat.COVER_IMAGE: ImageDimension.COVER,
             ImageFormat.PLAYER_POSTER: ImageDimension.PORTRAIT,
             ImageFormat.MATCH_POSTER: ImageDimension.LANDSCAPE,
         }
         dim = dimensions.get(image_format, ImageDimension.SQUARE)
+        use_real = os.environ.get("GENERATE_REAL_ASSETS", "false").lower() == "true"
+
         variants: list[ImageVariant] = []
         for i in range(min(num_variants, len(prompts))):
             quality = round(random.uniform(80, 97), 1)
             brand = round(random.uniform(82, 96), 1)
+            # Default mock URL used in planning / dry-run mode only
+            file_url = f"https://assets.sfc.sa/images/mock/{image_format.value}_v{i+1}.jpg"
+
+            if use_real:
+                from sfc.creative.providers.generated_asset import GeneratedAssetStatus
+                from sfc.creative.providers.image_providers import get_image_provider_chain
+                chain = get_image_provider_chain()
+                generated = await chain.generate(
+                    prompt=prompts[i],
+                    dimensions=dim.value,
+                    negative_prompt="blurry, low quality, text errors, wrong colors",
+                )
+                if generated.status == GeneratedAssetStatus.GENERATED:
+                    file_url = generated.local_path
+                    quality = generated.quality_score
+                else:
+                    # Provider unavailable — no real file; do not expose mock URL as generated
+                    file_url = ""
+
             variants.append(
                 ImageVariant(
                     variant_label=f"v{i + 1}",
-                    provider=providers[i % len(providers)],
+                    provider=_provider_order[i % len(_provider_order)],
                     prompt_used=prompts[i],
                     negative_prompt="blurry, low quality, text errors, wrong colors",
-                    file_url=f"https://assets.sfc.sa/images/mock/{image_format.value}_v{i+1}.jpg",
+                    file_url=file_url,
                     dimensions=dim,
                     style="sports_editorial_arabic",
                     quality_score=quality,

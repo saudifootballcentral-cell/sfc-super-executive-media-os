@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import random
 from typing import Any
 
@@ -93,19 +94,37 @@ class ThumbnailFactoryService:
         platform: str,
     ) -> list[ThumbnailVariant]:
         labels = list(ThumbnailVariantLabel)
+        use_real = os.environ.get("GENERATE_REAL_ASSETS", "false").lower() == "true"
         variants: list[ThumbnailVariant] = []
         for i, label in enumerate(labels):
             style = self._VISUAL_STYLES[i]
             color = self._COLOR_SCHEMES[i]
             prompt = await self._build_prompt(title, subject, style, color)
             ctr = self._predict_ctr(style, platform)
+            # Default mock URL for planning / dry-run mode
+            file_url = f"https://assets.sfc.sa/thumbnails/mock/{title[:20].replace(' ','_')}_{label.value}.jpg"
+
+            if use_real:
+                from sfc.creative.providers.generated_asset import GeneratedAssetStatus
+                from sfc.creative.providers.image_providers import get_image_provider_chain
+                chain = get_image_provider_chain()
+                generated = await chain.generate(
+                    prompt=prompt,
+                    dimensions="1280x720",
+                    negative_prompt="blurry, pixelated, low quality, wrong colors",
+                )
+                if generated.status == GeneratedAssetStatus.GENERATED:
+                    file_url = generated.local_path
+                else:
+                    file_url = ""
+
             variants.append(
                 ThumbnailVariant(
                     label=label,
                     title_text=self._title_text_for_style(title, style),
                     visual_style=style,
                     color_scheme=color,
-                    file_url=f"https://assets.sfc.sa/thumbnails/mock/{title[:20].replace(' ','_')}_{label.value}.jpg",
+                    file_url=file_url,
                     prompt_used=prompt,
                     ctr_prediction=ctr,
                 )

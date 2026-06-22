@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 from sfc.creative.packaging.models import (
@@ -194,6 +195,104 @@ class ContentPackagingService:
             except Exception:
                 pass
         return f"🔥 {title} | SFC — كرة القدم السعودية 🏆"
+
+    # ------------------------------------------------------------------
+    # Real-asset validation (Package 10B)
+    # ------------------------------------------------------------------
+
+    def validate_asset_for_packaging(
+        self, asset: Any
+    ) -> tuple[bool, list[str]]:
+        """Validate a GeneratedAsset before including it in a content package.
+
+        Accepts only assets where:
+          - status == 'generated'
+          - quality_score >= threshold
+          - governance_status in ('approved', 'pending_review')
+          - local_path is set and file exists with non-zero size
+        """
+        from sfc.creative.providers.generated_asset import (
+            GeneratedAssetStatus,
+            GovernanceStatus,
+        )
+
+        errors: list[str] = []
+
+        # Status check
+        if asset.status != GeneratedAssetStatus.GENERATED:
+            errors.append(
+                f"Asset status is '{asset.status.value}' — only 'generated' assets accepted"
+            )
+
+        # Quality check
+        if asset.quality_score < self._QUALITY_THRESHOLD:
+            errors.append(
+                f"Quality score {asset.quality_score:.1f} below threshold {self._QUALITY_THRESHOLD}"
+            )
+
+        # Governance check
+        if asset.governance_status not in (
+            GovernanceStatus.APPROVED,
+            GovernanceStatus.PENDING_REVIEW,
+        ):
+            errors.append(
+                f"Governance status '{asset.governance_status.value}' not acceptable"
+            )
+
+        # File existence and size
+        local_path = getattr(asset, "local_path", "")
+        if not local_path:
+            errors.append("No local_path — asset was not saved to disk")
+        else:
+            path = Path(local_path)
+            if not path.exists():
+                errors.append(f"File not found on disk: {local_path}")
+            elif path.stat().st_size == 0:
+                errors.append(f"File is zero bytes: {local_path}")
+
+        # Checksum must be present
+        if not getattr(asset, "checksum_sha256", ""):
+            errors.append("No checksum — file integrity unverified")
+
+        return (len(errors) == 0), errors
+
+    async def package_from_generated_assets(
+        self,
+        package_type: "PackageType",
+        title: str,
+        generated_assets: list[Any],
+        governance_cleared: bool = False,
+    ) -> "ContentPackage":
+        """Build a content package from validated GeneratedAsset objects.
+
+        Only assets that pass validate_asset_for_packaging() are included.
+        Raises ValueError if no valid assets are present.
+        """
+        valid_assets: list[Any] = []
+        rejected_reasons: dict[str, list[str]] = {}
+        for asset in generated_assets:
+            ok, errors = self.validate_asset_for_packaging(asset)
+            if ok:
+                valid_assets.append(asset)
+            else:
+                rejected_reasons[getattr(asset, "asset_id", "unknown")] = errors
+
+        if not valid_assets:
+            raise ValueError(
+                f"No valid GeneratedAssets for package '{title}'. "
+                f"Rejections: {rejected_reasons}"
+            )
+
+        avg_quality = sum(a.quality_score for a in valid_assets) / len(valid_assets)
+        media_assets = [a.to_dict() for a in valid_assets]
+
+        return await self.create_package(
+            package_type=package_type,
+            title=title,
+            media_assets=media_assets,
+            quality_score=round(avg_quality, 1),
+            governance_cleared=governance_cleared,
+        )
 
     def get_ready_packages(self) -> list[ContentPackage]:
         return [p for p in self._packages if p.ready_to_publish]
