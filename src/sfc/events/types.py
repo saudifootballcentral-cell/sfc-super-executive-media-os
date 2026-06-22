@@ -285,6 +285,86 @@ class BufferPostFailed(BaseEvent):
     event_type: str = "buffer_post_failed"
 
 
+# ---------------------------------------------------------------------------
+# Package 10D: Master Orchestrator events
+# ---------------------------------------------------------------------------
+
+class OrchestrationStarted(BaseEvent):
+    event_type: str = "orchestration_started"
+
+
+class OrchestrationCompleted(BaseEvent):
+    event_type: str = "orchestration_completed"
+
+
+class OrchestrationFailed(BaseEvent):
+    event_type: str = "orchestration_failed"
+
+
+class OrchestrationAborted(BaseEvent):
+    event_type: str = "orchestration_aborted"
+
+
+class StageStarted(BaseEvent):
+    event_type: str = "stage_started"
+
+
+class StageCompleted(BaseEvent):
+    event_type: str = "stage_completed"
+
+
+class StageFailed(BaseEvent):
+    event_type: str = "stage_failed"
+
+
+class StageSkipped(BaseEvent):
+    event_type: str = "stage_skipped"
+
+
+class OperatorApprovalRequested(BaseEvent):
+    event_type: str = "operator_approval_requested"
+
+
+class OperatorApprovalGranted(BaseEvent):
+    event_type: str = "operator_approval_granted"
+
+
+class OperatorApprovalDenied(BaseEvent):
+    event_type: str = "operator_approval_denied"
+
+
+class DataIngestionCompleted(BaseEvent):
+    event_type: str = "data_ingestion_completed"
+
+
+class SocialIntelligenceRunCompleted(BaseEvent):
+    event_type: str = "social_intelligence_run_completed"
+
+
+class NarrativeIntelligenceRunCompleted(BaseEvent):
+    event_type: str = "narrative_intelligence_run_completed"
+
+
+class CreativeProductionRunCompleted(BaseEvent):
+    event_type: str = "creative_production_run_completed"
+
+
+class ConnectorRunCompleted(BaseEvent):
+    event_type: str = "connector_run_completed"
+
+
+class WorkflowCheckpointSaved(BaseEvent):
+    event_type: str = "workflow_checkpoint_saved"
+
+
+class RecoveryAttempted(BaseEvent):
+    event_type: str = "recovery_attempted"
+
+
+class DryRunCompleted(BaseEvent):
+    event_type: str = "dry_run_completed"
+
+
 # Mapping from event_type string to class for deserialization
 EVENT_TYPE_MAP: dict[str, type[BaseEvent]] = {
     "opportunity_detected": OpportunityDetected,
@@ -354,4 +434,24 @@ EVENT_TYPE_MAP: dict[str, type[BaseEvent]] = {
     "buffer_post_created": BufferPostCreated,
     "buffer_post_published": BufferPostPublished,
     "buffer_post_failed": BufferPostFailed,
+    # Package 10D
+    "orchestration_started": OrchestrationStarted,
+    "orchestration_completed": OrchestrationCompleted,
+    "orchestration_failed": OrchestrationFailed,
+    "orchestration_aborted": OrchestrationAborted,
+    "stage_started": StageStarted,
+    "stage_completed": StageCompleted,
+    "stage_failed": StageFailed,
+    "stage_skipped": StageSkipped,
+    "operator_approval_requested": OperatorApprovalRequested,
+    "operator_approval_granted": OperatorApprovalGranted,
+    "operator_approval_denied": OperatorApprovalDenied,
+    "data_ingestion_completed": DataIngestionCompleted,
+    "social_intelligence_run_completed": SocialIntelligenceRunCompleted,
+    "narrative_intelligence_run_completed": NarrativeIntelligenceRunCompleted,
+    "creative_production_run_completed": CreativeProductionRunCompleted,
+    "connector_run_completed": ConnectorRunCompleted,
+    "workflow_checkpoint_saved": WorkflowCheckpointSaved,
+    "recovery_attempted": RecoveryAttempted,
+    "dry_run_completed": DryRunCompleted,
 }
