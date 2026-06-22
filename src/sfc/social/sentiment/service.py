@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import random
 from typing import Any
 
 from sfc.social.sentiment.models import (
@@ -17,6 +16,28 @@ from sfc.social.sentiment.models import (
 logger = logging.getLogger("sfc.social.sentiment")
 
 _singleton: "FanSentimentService | None" = None
+
+_ENTITY_DISPLAY_NAMES: dict[str, str] = {
+    "al_hilal_club": "Al Hilal",
+    "al_nassr_club": "Al Nassr",
+    "al_ittihad_club": "Al Ittihad",
+    "green_falcons_national_team": "Green Falcons",
+    "cristiano_ronaldo": "Cristiano Ronaldo",
+    "neymar_player": "Neymar",
+    "saudi_pro_league": "SPL",
+    "coach_roberto_mancini": "National team coach",
+}
+
+_FIXTURE_ENTITY_MAP: dict[str, str] = {
+    "al_hilal_club": "Al Hilal",
+    "al_nassr_club": "Al Nassr",
+    "al_ittihad_club": "Al Ittihad",
+    "green_falcons_national_team": "Green Falcons",
+    "cristiano_ronaldo": "Cristiano Ronaldo",
+    "neymar_player": "Neymar",
+    "saudi_pro_league": "SPL",
+    "coach_roberto_mancini": "Saudi Football Federation",
+}
 
 
 def get_sentiment_service() -> "FanSentimentService":
@@ -128,21 +149,29 @@ class FanSentimentService:
     async def _analyze_entity(
         self, entity_id: str, context: dict[str, Any]
     ) -> SentimentTarget_:
-        score = random.uniform(-60, 80)
-        momentum = random.uniform(-15, 15)
+        from sfc.data.fixtures.loader import get_fixture_loader
+        loader = get_fixture_loader()
+        fixture_key = _FIXTURE_ENTITY_MAP.get(entity_id, entity_id.replace("_", " ").title())
+        data = loader.get_sentiment(fixture_key)
+
+        score: float = float(data.get("sentiment_score", 55.0))
+        momentum: float = float(data.get("momentum", 0.5))
+        volatility: float = float(data.get("volatility", 10.0))
+        confidence: float = float(data.get("confidence", 75.0))
+        sample_size: int = int(data.get("sample_size", 5000))
 
         target_type = self._infer_target_type(entity_id)
         metrics = SentimentMetrics(
             score=round(score, 1),
             momentum=round(momentum, 1),
-            volatility=random.uniform(0, 30),
-            confidence=random.uniform(0.6, 0.95) * 100,
-            sample_size=random.randint(500, 50000),
+            volatility=round(volatility, 1),
+            confidence=round(confidence, 1),
+            sample_size=sample_size,
         )
 
         return SentimentTarget_(
             entity_id=entity_id,
-            entity_name=entity_id.replace("_", " ").title(),
+            entity_name=_ENTITY_DISPLAY_NAMES.get(entity_id, entity_id.replace("_", " ").title()),
             target_type=target_type,
             metrics=metrics,
             recent_drivers=self._get_drivers(entity_id, score),

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import random
 from datetime import datetime
 from typing import Any
 
@@ -103,10 +102,27 @@ class TrendRadarService:
         return [r.to_dict() for r in self._history[-limit:]]
 
     async def _analyze_topic(self, topic: str) -> TrendReport:
-        """Simulate trend analysis for a topic (mocked — no real API calls)."""
-        score = random.uniform(20, 95)
-        velocity = random.uniform(0.5, 10.0)
-        volume = random.randint(1000, 500000)
+        """Analyze trend for a topic using fixture data (no random values)."""
+        from sfc.data.fixtures.loader import get_fixture_loader
+        loader = get_fixture_loader()
+        topic_scores = loader.get_topic_scores()
+
+        data = topic_scores.get(topic, {})
+        if not data:
+            # fallback: search partial match in fixture trends
+            for key, val in topic_scores.items():
+                if any(w in key.lower() for w in topic.lower().split()):
+                    data = val
+                    break
+
+        score: float = float(data.get("score", 55.0))
+        velocity: float = float(data.get("velocity", 3.0))
+        volume: int = int(data.get("volume", 25000))
+        acceleration: float = float(data.get("acceleration", 0.5))
+        reach: int = int(data.get("reach", 200000))
+        engagement: float = float(data.get("engagement", 0.05))
+        peak_estimate_hours: float = float(data.get("peak_estimate_hours", 12.0))
+        confidence: float = float(data.get("confidence", 0.75))
 
         state = TrendState.EMERGING
         if velocity > 8:
@@ -121,17 +137,17 @@ class TrendRadarService:
         metrics = TrendMetrics(
             velocity=velocity,
             volume=volume,
-            acceleration=random.uniform(-2, 5),
-            reach=random.randint(10000, 2000000),
-            engagement=random.uniform(0.01, 0.15),
+            acceleration=acceleration,
+            reach=reach,
+            engagement=engagement,
         )
 
         forecast = TrendForecast(
             expected_state_in_1h=state.value,
             expected_state_in_6h=TrendState.HOT.value if score > 60 else TrendState.DECLINING.value,
             expected_state_in_24h=TrendState.DECLINING.value,
-            peak_estimate_hours=random.uniform(2, 18),
-            confidence=random.uniform(0.6, 0.95),
+            peak_estimate_hours=peak_estimate_hours,
+            confidence=confidence,
             narrative=f"{topic} is gaining traction across social platforms.",
         )
 
@@ -171,14 +187,14 @@ class TrendRadarService:
 
     def _get_default_topics(self) -> list[str]:
         return [
-            "Al Hilal Champions League",
-            "Saudi Pro League transfer window",
-            "Green Falcons World Cup qualifier",
-            "Neymar Al Hilal",
-            "Cristiano Ronaldo Al Nassr",
-            "SPL match day highlights",
-            "Saudi football academy",
-            "Arab Champions League",
+            "Al Hilal Champions League run",
+            "Saudi Pro League quality debate",
+            "Green Falcons World Cup qualification",
+            "Foreign star player signing",
+            "Saudi football academy development",
+            "SPL broadcast rights expansion",
+            "National team coach criticism",
+            "Transfer window activity Saudi",
             "VAR controversy SPL",
             "Saudi national team coach",
         ]

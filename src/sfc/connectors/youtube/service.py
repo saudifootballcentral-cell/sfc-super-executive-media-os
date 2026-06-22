@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-import random
 from datetime import datetime
 from typing import Any
 
@@ -23,6 +22,8 @@ from sfc.connectors.youtube.models import (
 logger = logging.getLogger("sfc.connectors.youtube")
 
 _singleton: "YouTubeService | None" = None
+
+_MOCK_LATENCY_MS = 420.0
 
 
 def get_youtube_service() -> "YouTubeService":
@@ -74,7 +75,7 @@ class YouTubeService:
                 published_at=datetime.utcnow(),
             )
             self._publish_history.append(result)
-            self._observability.record_success(latency_ms=random.uniform(200, 800))
+            self._observability.record_success(latency_ms=_MOCK_LATENCY_MS)
             logger.info(
                 "[YouTube] Uploaded %s | id=%s title=%s",
                 "Short" if is_short else "Video",
@@ -99,7 +100,7 @@ class YouTubeService:
         tags: list[str] | None = None,
     ) -> bool:
         try:
-            self._observability.record_success(latency_ms=random.uniform(100, 300))
+            self._observability.record_success(latency_ms=180.0)
             logger.info("[YouTube] Metadata updated | id=%s", video_id)
             return True
         except Exception as exc:
@@ -108,7 +109,7 @@ class YouTubeService:
 
     async def update_thumbnail(self, video_id: str, thumbnail_url: str) -> bool:
         try:
-            self._observability.record_success(latency_ms=random.uniform(150, 400))
+            self._observability.record_success(latency_ms=260.0)
             logger.info("[YouTube] Thumbnail updated | id=%s", video_id)
             return True
         except Exception as exc:
@@ -131,7 +132,7 @@ class YouTubeService:
                 url=f"https://www.youtube.com/playlist?list=PL_sfc_{title[:8].replace(' ','_')}",
             )
             self._playlists[playlist.playlist_id] = playlist
-            self._observability.record_success(latency_ms=random.uniform(100, 200))
+            self._observability.record_success(latency_ms=140.0)
             logger.info("[YouTube] Playlist created | '%s' items=%d", title, playlist.item_count)
             return playlist
         except Exception as exc:
@@ -155,20 +156,25 @@ class YouTubeService:
 
     async def get_analytics(self, video_id: str) -> YouTubeAnalytics:
         try:
+            from sfc.data.fixtures.loader import get_fixture_loader
+            loader = get_fixture_loader()
+            video_type = "short" if "short" in video_id.lower() else "default"
+            data = loader.get_analytics_video(video_type)
+
             analytics = YouTubeAnalytics(
                 video_id=video_id,
-                views=random.randint(1_000, 500_000),
-                impressions=random.randint(10_000, 2_000_000),
-                ctr=round(random.uniform(3.5, 12.0), 2),
-                watch_time_hours=round(random.uniform(100, 50_000), 1),
-                avg_view_duration_seconds=round(random.uniform(25, 180), 1),
-                avg_view_percentage=round(random.uniform(30, 75), 1),
-                likes=random.randint(50, 20_000),
-                comments=random.randint(5, 2_000),
-                shares=random.randint(10, 5_000),
-                subscribers_gained=random.randint(0, 500),
+                views=int(data.get("views", 45000)),
+                impressions=int(data.get("impressions", 210000)),
+                ctr=float(data.get("ctr", 4.8)),
+                watch_time_hours=float(data.get("watch_time_hours", 3200)),
+                avg_view_duration_seconds=float(data.get("avg_view_duration_seconds", 128)),
+                avg_view_percentage=float(data.get("avg_view_percentage", 45.0)),
+                likes=int(data.get("likes", 1800)),
+                comments=int(data.get("comments", 95)),
+                shares=int(data.get("shares", 320)),
+                subscribers_gained=int(data.get("subscribers_gained", 68)),
             )
-            self._observability.record_success(latency_ms=random.uniform(80, 250))
+            self._observability.record_success(latency_ms=155.0)
             return analytics
         except Exception as exc:
             self._observability.record_failure(str(exc))
@@ -176,17 +182,21 @@ class YouTubeService:
 
     async def get_channel_metrics(self) -> ChannelMetrics:
         try:
+            from sfc.data.fixtures.loader import get_fixture_loader
+            loader = get_fixture_loader()
+            data = loader.get_analytics_channel()
+
             metrics = ChannelMetrics(
                 channel_id=self._channel_id,
-                channel_name="SFC Saudi Football",
-                subscriber_count=random.randint(50_000, 2_000_000),
-                total_views=random.randint(1_000_000, 100_000_000),
-                video_count=random.randint(100, 5_000),
-                monthly_views=random.randint(100_000, 5_000_000),
-                subscriber_growth_30d=random.randint(500, 50_000),
-                avg_views_per_video=round(random.uniform(5_000, 200_000), 1),
+                channel_name=str(data.get("channel_name", "SFC Saudi Football")),
+                subscriber_count=int(data.get("subscriber_count", 487000)),
+                total_views=int(data.get("total_views", 38500000)),
+                video_count=int(data.get("video_count", 1240)),
+                monthly_views=int(data.get("monthly_views", 1850000)),
+                subscriber_growth_30d=int(data.get("subscriber_growth_30d", 12400)),
+                avg_views_per_video=float(data.get("avg_views_per_video", 31050)),
             )
-            self._observability.record_success(latency_ms=random.uniform(80, 200))
+            self._observability.record_success(latency_ms=130.0)
             return metrics
         except Exception as exc:
             self._observability.record_failure(str(exc))
@@ -205,11 +215,11 @@ class YouTubeService:
                         video_id=video_id,
                         text=f"Mock comment {i+1} on video {video_id} — SFC content!",
                         author=f"@fan_{i+1}",
-                        like_count=random.randint(0, 100),
+                        like_count=10 + i * 8,
                         sentiment=sentiments[i % len(sentiments)],
                     )
                 )
-            self._observability.record_success(latency_ms=random.uniform(100, 300))
+            self._observability.record_success(latency_ms=190.0)
             return comments
         except Exception as exc:
             self._observability.record_failure(str(exc))

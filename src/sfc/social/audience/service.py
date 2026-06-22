@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import random
 from typing import Any
 
 from sfc.social.audience.models import (
@@ -16,6 +15,28 @@ from sfc.social.audience.models import (
 logger = logging.getLogger("sfc.social.audience")
 
 _singleton: "AudienceIntelligenceService | None" = None
+
+_SEGMENT_FIXTURE_KEYS: dict[AudienceSegmentType, str] = {
+    AudienceSegmentType.CORE_FANS: "core_football_fans",
+    AudienceSegmentType.CASUAL_VIEWERS: "casual_viewers",
+    AudienceSegmentType.TRANSFER_WATCHERS: "international_football_fans",
+    AudienceSegmentType.STATS_ENTHUSIASTS: "core_football_fans",
+    AudienceSegmentType.YOUTH_AUDIENCE: "youth_fans",
+    AudienceSegmentType.INTERNATIONAL_FANS: "international_football_fans",
+    AudienceSegmentType.SAUDI_NATIONAL_FANS: "core_football_fans",
+    AudienceSegmentType.FANTASY_PLAYERS: "core_football_fans",
+}
+
+_SEGMENT_PLATFORMS: dict[AudienceSegmentType, list[str]] = {
+    AudienceSegmentType.CORE_FANS: ["x", "instagram"],
+    AudienceSegmentType.CASUAL_VIEWERS: ["youtube", "tiktok"],
+    AudienceSegmentType.TRANSFER_WATCHERS: ["x", "reddit"],
+    AudienceSegmentType.STATS_ENTHUSIASTS: ["reddit", "x"],
+    AudienceSegmentType.YOUTH_AUDIENCE: ["tiktok", "instagram"],
+    AudienceSegmentType.INTERNATIONAL_FANS: ["youtube", "x"],
+    AudienceSegmentType.SAUDI_NATIONAL_FANS: ["x", "instagram"],
+    AudienceSegmentType.FANTASY_PLAYERS: ["x", "reddit"],
+}
 
 
 def get_audience_service() -> "AudienceIntelligenceService":
@@ -57,13 +78,26 @@ class AudienceIntelligenceService:
             sum(s.growth_rate for s in segments) / len(segments) if segments else 0.0
         )
 
+        from sfc.data.fixtures.loader import get_fixture_loader
+        loader = get_fixture_loader()
+        # Weighted average content consumption from fixture data
+        fixture_sums = 0.0
+        fixture_count = 0
+        for seg in segments:
+            fixture_key = _SEGMENT_FIXTURE_KEYS.get(seg.segment_type, "core_football_fans")
+            fixture_data = loader.get_audience_segment(fixture_key)
+            if fixture_data:
+                fixture_sums += float(fixture_data.get("avg_content_per_day", 5.5))
+                fixture_count += 1
+        avg_content_per_day = round(fixture_sums / max(fixture_count, 1), 2)
+
         profile = AudienceProfile(
             total_audience=total_audience,
             segments=segments,
             top_platform=top_platform,
             peak_day="Friday",
             peak_hour=peak_hour,
-            avg_content_consumed_per_day=random.uniform(3.5, 8.2),
+            avg_content_consumed_per_day=avg_content_per_day,
             growth_rate_monthly=round(avg_growth, 1),
             growth_opportunities=self._growth_opportunities(segments),
             retention_opportunities=self._retention_opportunities(segments),
@@ -146,19 +180,28 @@ class AudienceIntelligenceService:
         return [r.to_dict() for r in self._history[-limit:]]
 
     def _build_segment(self, segment_type: AudienceSegmentType) -> AudienceSegment:
-        configs = {
-            AudienceSegmentType.CORE_FANS: (850000, 3.2, ["x", "instagram"]),
-            AudienceSegmentType.CASUAL_VIEWERS: (2100000, 8.5, ["youtube", "tiktok"]),
-            AudienceSegmentType.TRANSFER_WATCHERS: (650000, 12.1, ["x", "reddit"]),
-            AudienceSegmentType.STATS_ENTHUSIASTS: (320000, 5.4, ["reddit", "x"]),
-            AudienceSegmentType.YOUTH_AUDIENCE: (1400000, 22.3, ["tiktok", "instagram"]),
-            AudienceSegmentType.INTERNATIONAL_FANS: (980000, 15.7, ["youtube", "x"]),
-            AudienceSegmentType.SAUDI_NATIONAL_FANS: (3200000, 6.8, ["x", "instagram"]),
-            AudienceSegmentType.FANTASY_PLAYERS: (280000, 9.1, ["x", "reddit"]),
+        from sfc.data.fixtures.loader import get_fixture_loader
+        loader = get_fixture_loader()
+
+        fixture_key = _SEGMENT_FIXTURE_KEYS.get(segment_type, "core_football_fans")
+        data = loader.get_audience_segment(fixture_key)
+
+        base_sizes: dict[AudienceSegmentType, int] = {
+            AudienceSegmentType.CORE_FANS: 1840000,
+            AudienceSegmentType.CASUAL_VIEWERS: 4200000,
+            AudienceSegmentType.TRANSFER_WATCHERS: 2640000,
+            AudienceSegmentType.STATS_ENTHUSIASTS: 920000,
+            AudienceSegmentType.YOUTH_AUDIENCE: 3100000,
+            AudienceSegmentType.INTERNATIONAL_FANS: 2640000,
+            AudienceSegmentType.SAUDI_NATIONAL_FANS: 4200000,
+            AudienceSegmentType.FANTASY_PLAYERS: 920000,
         }
-        size, growth, platforms = configs.get(segment_type, (100000, 5.0, ["x"]))
-        size = int(size * random.uniform(0.85, 1.15))
-        growth = round(growth * random.uniform(0.8, 1.2), 1)
+
+        size: int = int(data.get("size", base_sizes.get(segment_type, 500000)))
+        growth: float = round(float(data.get("growth_rate", 5.0)), 1)
+        avg_session: float = float(data.get("avg_session_minutes", 8.0))
+        retention: float = float(data.get("retention_rate", 0.65))
+        platforms = _SEGMENT_PLATFORMS.get(segment_type, ["x"])
 
         return AudienceSegment(
             name=segment_type.value.replace("_", " ").title(),
@@ -169,8 +212,8 @@ class AudienceIntelligenceService:
             preferred_platforms=platforms,
             peak_hours=[20, 21, 22],
             content_preferences=["video", "breaking news", "analysis"],
-            avg_session_minutes=random.uniform(4, 18),
-            retention_rate=random.uniform(0.55, 0.88),
+            avg_session_minutes=avg_session,
+            retention_rate=retention,
         )
 
     def _find_top_platform(self, segments: list[AudienceSegment]) -> str:

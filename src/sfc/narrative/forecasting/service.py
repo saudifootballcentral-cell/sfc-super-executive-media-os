@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import random
 from typing import Any
 
 from sfc.narrative.forecasting.models import (
@@ -16,6 +15,14 @@ from sfc.narrative.forecasting.models import (
 logger = logging.getLogger("sfc.narrative.forecasting")
 
 _singleton: "NarrativeForecastingEngine | None" = None
+
+_HORIZON_CONFIDENCE: dict[str, float] = {
+    ForecastHorizon.H24.value: 0.88,
+    ForecastHorizon.H72.value: 0.76,
+    ForecastHorizon.D7.value: 0.64,
+    ForecastHorizon.D30.value: 0.52,
+    ForecastHorizon.D90.value: 0.38,
+}
 
 
 def get_forecasting_engine() -> "NarrativeForecastingEngine":
@@ -48,10 +55,22 @@ class NarrativeForecastingEngine:
     ) -> NarrativeForecast:
         """Generate multi-horizon forecast for a narrative."""
         metrics = current_metrics or {}
-        base_score = metrics.get("strength_score", random.uniform(40, 80))
-        base_sentiment = metrics.get("sentiment_score", random.uniform(-20, 60))
-        base_reach = metrics.get("reach", random.randint(10000, 500000))
-        base_velocity = metrics.get("velocity", random.uniform(1, 6))
+
+        # Pull fixture data if metrics are sparse
+        from sfc.data.fixtures.loader import get_fixture_loader
+        loader = get_fixture_loader()
+        topic_scores = loader.get_topic_scores()
+        title = narrative_title or narrative_id
+        fixture_data = topic_scores.get(title, {})
+        for key, val in topic_scores.items():
+            if not fixture_data and any(w in key.lower() for w in title.lower().split()):
+                fixture_data = val
+                break
+
+        base_score: float = float(metrics.get("strength_score", fixture_data.get("score", 60.0)))
+        base_sentiment: float = float(metrics.get("sentiment_score", fixture_data.get("score", 60.0) - 10.0))
+        base_reach: int = int(metrics.get("reach", fixture_data.get("reach", 200000)))
+        base_velocity: float = float(metrics.get("velocity", fixture_data.get("velocity", 3.5)))
 
         horizons: dict[str, HorizonForecast] = {}
         decay_factors = {
@@ -75,11 +94,11 @@ class NarrativeForecastingEngine:
             )),
             1,
         )
-        confidence = round(random.uniform(0.55, 0.90), 2)
+        confidence: float = float(fixture_data.get("confidence", 0.78))
 
-        key_signals = await self._get_key_signals(narrative_title, base_score)
+        key_signals = await self._get_key_signals(title, base_score)
         forecast_narrative = await self._get_forecast_narrative(
-            narrative_title, base_score, horizons
+            title, base_score, horizons
         )
 
         risk_signals = []
@@ -91,9 +110,9 @@ class NarrativeForecastingEngine:
         if horizons[ForecastHorizon.H24.value].expected_virality > 70:
             opportunity_signals.append("Viral potential in next 24 hours")
 
-        forecast = NarrativeForecast(
+        forecast_obj = NarrativeForecast(
             narrative_id=narrative_id,
-            narrative_title=narrative_title,
+            narrative_title=title,
             horizons=horizons,
             overall_forecast_score=overall_score,
             forecast_narrative=forecast_narrative,
@@ -104,9 +123,9 @@ class NarrativeForecastingEngine:
         )
 
         if len(self._forecasts) < self._max_history:
-            self._forecasts.append(forecast)
+            self._forecasts.append(forecast_obj)
 
-        return forecast
+        return forecast_obj
 
     async def forecast_bundle(
         self,
@@ -150,12 +169,13 @@ class NarrativeForecastingEngine:
         base_velocity: float,
         decay: float,
     ) -> HorizonForecast:
-        noise = random.uniform(0.85, 1.15)
+        # Deterministic: no noise multiplier
         growth = round((decay - 1) * 100, 1)
-        expected_reach = int(base_reach * decay * noise)
+        expected_reach = int(base_reach * decay)
         expected_sentiment = round(max(-1.0, min(1.0, base_sentiment / 100 * decay)), 2)
-        expected_virality = round(min(base_score * decay * noise, 100), 1)
-        forecast_score = round(min(base_score * decay * noise, 100), 1)
+        expected_virality = round(min(base_score * decay, 100), 1)
+        forecast_score = round(min(base_score * decay, 100), 1)
+        confidence = _HORIZON_CONFIDENCE.get(horizon.value, 0.6)
 
         return HorizonForecast(
             horizon=horizon,
@@ -165,7 +185,7 @@ class NarrativeForecastingEngine:
             expected_influence=round(min(base_velocity * decay * 12, 100), 1),
             expected_virality=expected_virality,
             peak_probability=round(min(expected_virality / 100, 0.95), 2),
-            confidence=round(1.0 - (0.15 * list(ForecastHorizon).index(horizon)), 2),
+            confidence=confidence,
             forecast_score=forecast_score,
         )
 

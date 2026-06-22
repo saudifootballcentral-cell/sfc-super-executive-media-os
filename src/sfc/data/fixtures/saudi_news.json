@@ -1,0 +1,86 @@
+{
+  "data_source": "mock_fixture",
+  "description": "Realistic RSS news items about Saudi football",
+  "items": [
+    {
+      "headline": "Al Hilal advances to AFC Champions League Elite quarter-finals",
+      "summary": "Saudi giants Al Hilal secured a 3-1 win over Pohang Steelers to advance to the quarter-finals of the AFC Champions League Elite.",
+      "source_url": "https://www.arabiansports.com/al-hilal-afc-qf",
+      "author": "Arabian Sports Staff",
+      "language": "en",
+      "tags": ["AlHilal", "AFC", "Champions League", "SPL"],
+      "sentiment_label": "positive",
+      "category": "match_result"
+    },
+    {
+      "headline": "Cristiano Ronaldo scores brace as Al Nassr edge Al Ahli in top-of-table clash",
+      "summary": "Cristiano Ronaldo netted twice as Al Nassr defeated rivals Al Ahli 2-1 in a decisive Saudi Pro League encounter.",
+      "source_url": "https://www.goal.com/en/news/al-nassr-al-ahli",
+      "author": "Goal.com Arabia",
+      "language": "en",
+      "tags": ["AlNassr", "AlAhli", "Ronaldo", "SPL"],
+      "sentiment_label": "positive",
+      "category": "match_result"
+    },
+    {
+      "headline": "Saudi Football Federation unveils Vision 2034 football development roadmap",
+      "summary": "The SFF announced a comprehensive plan to develop grassroots football across all 13 Saudi regions ahead of the 2034 World Cup.",
+      "source_url": "https://www.sff.org.sa/news/vision2034",
+      "author": "SFF Communications",
+      "language": "en",
+      "tags": ["SFF", "WorldCup2034", "development"],
+      "sentiment_label": "positive",
+      "category": "federation"
+    },
+    {
+      "headline": "الهلال يفوز ببطولة الدوري السعودي للمرة الثانية عشرة على التوالي",
+      "summary": "حقق نادي الهلال لقب دوري روشن للمحترفين للموسم الجديد بعد فوزه على النصر في الجولة الأخيرة.",
+      "source_url": "https://www.spl.com.sa/ar/news/hilal-title",
+      "author": "دوري روشن",
+      "language": "ar",
+      "tags": ["الهلال", "دوري_روشن", "SPL"],
+      "sentiment_label": "positive",
+      "category": "match_result"
+    },
+    {
+      "headline": "SPL attracts record 1.2 billion broadcast minutes in Q1 2026",
+      "summary": "The Saudi Pro League set a new record for broadcast consumption with 1.2 billion minutes watched globally in the first quarter.",
+      "source_url": "https://www.spl.com.sa/en/news/broadcast-record",
+      "author": "SPL Media",
+      "language": "en",
+      "tags": ["SPL", "broadcast", "viewership"],
+      "sentiment_label": "positive",
+      "category": "commercial"
+    },
+    {
+      "headline": "Green Falcons coach names extended squad for World Cup qualifier",
+      "summary": "Saudi Arabia's national team manager has named a 26-man squad for the crucial World Cup qualifying double-header.",
+      "source_url": "https://www.arabiansports.com/green-falcons-squad",
+      "author": "Arabian Sports Staff",
+      "language": "en",
+      "tags": ["GreenFalcons", "WorldCup", "qualifier"],
+      "sentiment_label": "neutral",
+      "category": "national_team"
+    },
+    {
+      "headline": "Al Ittihad sign Brazilian winger on three-year deal",
+      "summary": "Al Ittihad have completed the signing of Brazilian international winger from Atletico Mineiro in a deal worth SAR 45 million.",
+      "source_url": "https://www.transfermarkt.de/al-ittihad-signing",
+      "author": "Transfermarkt",
+      "language": "en",
+      "tags": ["AlIttihad", "transfer", "signing"],
+      "sentiment_label": "positive",
+      "category": "transfer"
+    },
+    {
+      "headline": "Saudi academy graduate makes debut for Al Hilal first team",
+      "summary": "18-year-old Abdulrahman Al-Qahtani became the youngest player to represent Al Hilal this season after coming on as a substitute.",
+      "source_url": "https://www.sfc.sa/news/academy-debut",
+      "author": "SFC Editorial",
+      "language": "en",
+      "tags": ["AlHilal", "academy", "youth"],
+      "sentiment_label": "positive",
+      "category": "youth"
+    }
+  ]
+}

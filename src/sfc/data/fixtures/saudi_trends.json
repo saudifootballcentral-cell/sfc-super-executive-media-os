@@ -1,0 +1,178 @@
+{
+  "data_source": "mock_fixture",
+  "description": "Realistic Saudi football trend data — SPL Season 2025-26",
+  "trends": [
+    {
+      "term": "#AlHilal",
+      "tweet_volume": 125400,
+      "velocity": 8.2,
+      "sentiment": "positive",
+      "relevance_score": 98.0,
+      "category": "club",
+      "language": "ar"
+    },
+    {
+      "term": "#AlNassr",
+      "tweet_volume": 98700,
+      "velocity": 7.1,
+      "sentiment": "positive",
+      "relevance_score": 96.0,
+      "category": "club",
+      "language": "ar"
+    },
+    {
+      "term": "#SaudiProLeague",
+      "tweet_volume": 87200,
+      "velocity": 6.5,
+      "sentiment": "neutral",
+      "relevance_score": 99.0,
+      "category": "league",
+      "language": "en"
+    },
+    {
+      "term": "#الدوري_السعودي",
+      "tweet_volume": 76500,
+      "velocity": 5.9,
+      "sentiment": "positive",
+      "relevance_score": 99.0,
+      "category": "league",
+      "language": "ar"
+    },
+    {
+      "term": "#SPL",
+      "tweet_volume": 62300,
+      "velocity": 4.8,
+      "sentiment": "neutral",
+      "relevance_score": 95.0,
+      "category": "league",
+      "language": "en"
+    },
+    {
+      "term": "#AlIttihad",
+      "tweet_volume": 54100,
+      "velocity": 4.2,
+      "sentiment": "positive",
+      "relevance_score": 91.0,
+      "category": "club",
+      "language": "ar"
+    },
+    {
+      "term": "#WorldCup2034",
+      "tweet_volume": 48900,
+      "velocity": 3.7,
+      "sentiment": "excited",
+      "relevance_score": 88.0,
+      "category": "tournament",
+      "language": "en"
+    },
+    {
+      "term": "#كرة_القدم",
+      "tweet_volume": 41200,
+      "velocity": 3.1,
+      "sentiment": "positive",
+      "relevance_score": 85.0,
+      "category": "general",
+      "language": "ar"
+    },
+    {
+      "term": "#SaudiFootball",
+      "tweet_volume": 38700,
+      "velocity": 2.9,
+      "sentiment": "positive",
+      "relevance_score": 92.0,
+      "category": "general",
+      "language": "en"
+    },
+    {
+      "term": "#AlAhli",
+      "tweet_volume": 32500,
+      "velocity": 2.4,
+      "sentiment": "neutral",
+      "relevance_score": 87.0,
+      "category": "club",
+      "language": "ar"
+    }
+  ],
+  "topic_scores": {
+    "Al Hilal Champions League run": {
+      "score": 82.5,
+      "velocity": 7.8,
+      "volume": 125400,
+      "acceleration": 2.1,
+      "reach": 1250000,
+      "engagement": 0.087,
+      "peak_estimate_hours": 6.0,
+      "confidence": 0.91
+    },
+    "Saudi Pro League quality debate": {
+      "score": 71.3,
+      "velocity": 5.2,
+      "volume": 87200,
+      "acceleration": 0.8,
+      "reach": 720000,
+      "engagement": 0.065,
+      "peak_estimate_hours": 12.0,
+      "confidence": 0.84
+    },
+    "Green Falcons World Cup qualification": {
+      "score": 76.8,
+      "velocity": 6.1,
+      "volume": 94300,
+      "acceleration": 1.5,
+      "reach": 890000,
+      "engagement": 0.079,
+      "peak_estimate_hours": 8.0,
+      "confidence": 0.88
+    },
+    "Foreign star player signing": {
+      "score": 85.2,
+      "velocity": 8.9,
+      "volume": 142000,
+      "acceleration": 3.2,
+      "reach": 1680000,
+      "engagement": 0.102,
+      "peak_estimate_hours": 4.0,
+      "confidence": 0.93
+    },
+    "Saudi football academy development": {
+      "score": 58.4,
+      "velocity": 3.1,
+      "volume": 34500,
+      "acceleration": 0.4,
+      "reach": 210000,
+      "engagement": 0.041,
+      "peak_estimate_hours": 16.0,
+      "confidence": 0.72
+    },
+    "SPL broadcast rights expansion": {
+      "score": 64.7,
+      "velocity": 4.2,
+      "volume": 51200,
+      "acceleration": 0.9,
+      "reach": 380000,
+      "engagement": 0.055,
+      "peak_estimate_hours": 14.0,
+      "confidence": 0.78
+    },
+    "National team coach criticism": {
+      "score": 68.9,
+      "velocity": 5.8,
+      "volume": 73400,
+      "acceleration": 1.8,
+      "reach": 620000,
+      "engagement": 0.074,
+      "peak_estimate_hours": 10.0,
+      "confidence": 0.82
+    },
+    "Transfer window activity Saudi": {
+      "score": 79.1,
+      "velocity": 7.2,
+      "volume": 108000,
+      "acceleration": 2.6,
+      "reach": 980000,
+      "engagement": 0.091,
+      "peak_estimate_hours": 5.0,
+      "confidence": 0.89
+    }
+  }
+}

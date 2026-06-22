@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import random
 from typing import Any
 
 from sfc.narrative.modeling.models import (
@@ -18,6 +17,13 @@ from sfc.narrative.modeling.models import (
 logger = logging.getLogger("sfc.narrative.modeling")
 
 _singleton: "NarrativeModelingService | None" = None
+
+_NARRATIVE_RELATIONSHIP_PAIRS: list[tuple[int, int, str]] = [
+    (0, 1, NarrativeRelationshipType.AMPLIFIES.value if hasattr(NarrativeRelationshipType, "AMPLIFIES") else "amplifies"),
+    (2, 3, "amplifies"),
+    (4, 5, "conflicts"),
+    (6, 7, "amplifies"),
+]
 
 
 def get_narrative_modeling_service() -> "NarrativeModelingService":
@@ -103,21 +109,35 @@ class NarrativeModelingService:
         return [m.to_dict() for m in self._history[-limit:]]
 
     async def _build_profile(self, topic: str, context: dict[str, Any]) -> NarrativeProfile:
-        strength = random.uniform(30, 90)
-        sentiment = random.uniform(20, 90)
-        virality = random.uniform(20, 85)
+        from sfc.data.fixtures.loader import get_fixture_loader
+        loader = get_fixture_loader()
+        topic_scores = loader.get_topic_scores()
+
+        data = topic_scores.get(topic, {})
+        if not data:
+            for key, val in topic_scores.items():
+                if any(w in key.lower() for w in topic.lower().split()):
+                    data = val
+                    break
+
+        strength: float = float(data.get("score", 60.0))
+        sentiment: float = float(data.get("score", 60.0)) * 0.95
+        virality: float = float(data.get("score", 60.0)) * 0.9
 
         influence_model = NarrativeInfluenceModel(
-            primary_drivers=[f"@SFCNews", "@SPL_EN"],
+            primary_drivers=["@SFCNews", "@SPL_EN"],
             amplifiers=["@AlHilalFanTV", "@TransferArabia"],
             suppressors=[],
             platform_weights={"x": 0.4, "instagram": 0.3, "tiktok": 0.2, "youtube": 0.1},
-            influencer_impact=random.uniform(30, 70),
-            media_impact=random.uniform(20, 60),
-            organic_impact=random.uniform(15, 50),
+            influencer_impact=min(strength * 0.75, 70.0),
+            media_impact=min(strength * 0.6, 60.0),
+            organic_impact=min(strength * 0.55, 50.0),
         )
 
         ai_insights = await self._get_ai_profile_insights(topic)
+
+        # Momentum uses velocity from fixture or a fixed moderate value
+        momentum: float = float(data.get("velocity", 3.5)) * 10.0
 
         return NarrativeProfile(
             title=topic,
@@ -127,9 +147,9 @@ class NarrativeModelingService:
             keywords=topic.lower().split()[:5],
             hashtags=[f"#{topic.replace(' ', '')}", "#SaudiFootball"],
             strength_score=round(strength, 1),
-            momentum_score=round(random.uniform(20, 80), 1),
+            momentum_score=round(min(momentum, 100.0), 1),
             sentiment_score=round(sentiment, 1),
-            credibility_score=round(random.uniform(40, 90), 1),
+            credibility_score=round(min(strength * 0.85, 90.0), 1),
             virality_potential=round(virality, 1),
             influence_model=influence_model,
             origin_platform="x",
@@ -150,18 +170,25 @@ class NarrativeModelingService:
             return f"Narrative around {topic} is developing in Saudi football media."
 
     def _build_relationships(self, profiles: list[NarrativeProfile]) -> None:
+        """Build deterministic relationships based on narrative type similarity."""
         for i, p1 in enumerate(profiles):
             for p2 in profiles[i + 1:]:
-                if random.random() > 0.6:
-                    rel_type = random.choice(list(NarrativeRelationshipType))
-                    rel = NarrativeRelationship(
-                        source_narrative_id=p1.profile_id,
-                        target_narrative_id=p2.profile_id,
-                        relationship_type=rel_type,
-                        strength=random.uniform(0.3, 0.9),
-                    )
-                    self._relationships.append(rel)
-                    p1.related_narratives.append(p2.profile_id)
+                if p1.narrative_type == p2.narrative_type:
+                    rel_type = NarrativeRelationshipType.REINFORCES if hasattr(NarrativeRelationshipType, "REINFORCES") else list(NarrativeRelationshipType)[0]
+                    strength = 0.6
+                elif p1.sentiment_score > 50 and p2.sentiment_score < 40:
+                    rel_type = NarrativeRelationshipType.CONFLICTS if hasattr(NarrativeRelationshipType, "CONFLICTS") else list(NarrativeRelationshipType)[1]
+                    strength = 0.5
+                else:
+                    continue
+                rel = NarrativeRelationship(
+                    source_narrative_id=p1.profile_id,
+                    target_narrative_id=p2.profile_id,
+                    relationship_type=rel_type,
+                    strength=strength,
+                )
+                self._relationships.append(rel)
+                p1.related_narratives.append(p2.profile_id)
 
     def _detect_clusters(self, profiles: list[NarrativeProfile]) -> list[list[str]]:
         clusters: dict[NarrativeType, list[str]] = {}

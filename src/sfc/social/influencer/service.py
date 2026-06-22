@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import random
 from typing import Any
 
 from sfc.social.influencer.models import (
@@ -16,6 +15,21 @@ from sfc.social.influencer.models import (
 logger = logging.getLogger("sfc.social.influencer")
 
 _singleton: "InfluencerIntelligenceService | None" = None
+
+_INFLUENCER_DATA = [
+    ("Saudi Football Daily", "@SFD_News", InfluencerType.JOURNALIST, 450000, ["ar", "en"]),
+    ("SPL Insider", "@SPL_Insider", InfluencerType.JOURNALIST, 380000, ["ar"]),
+    ("Al Hilal Fan TV", "@AlHilalFanTV", InfluencerType.CREATOR, 620000, ["ar"]),
+    ("Arabic Football Analysis", "@AFA_Analysis", InfluencerType.ANALYST, 290000, ["ar", "en"]),
+    ("خالد الغامدي", "@khaled_ghamdi", InfluencerType.FORMER_PLAYER, 890000, ["ar"]),
+    ("محمد العويس", "@m_alowais", InfluencerType.FORMER_PLAYER, 1200000, ["ar"]),
+    ("Al Nassr Official", "@AlNassrFC", InfluencerType.CLUB_ACCOUNT, 5500000, ["ar", "en"]),
+    ("Al Hilal Official", "@Alhilal_EN", InfluencerType.CLUB_ACCOUNT, 7200000, ["ar", "en"]),
+    ("SFC Media Network", "@SFC_Media", InfluencerType.MEDIA_ORG, 340000, ["ar"]),
+    ("Saudi Sports TV", "@SaudiSportsTV", InfluencerType.MEDIA_ORG, 780000, ["ar"]),
+    ("Gulf Football Review", "@GFR_News", InfluencerType.JOURNALIST, 210000, ["ar", "en"]),
+    ("Transfer Arabia", "@TransferArabia", InfluencerType.CREATOR, 560000, ["ar"]),
+]
 
 
 def get_influencer_service() -> "InfluencerIntelligenceService":
@@ -128,30 +142,25 @@ class InfluencerIntelligenceService:
         return [r.to_dict() for r in self._history[-limit:]]
 
     def _build_default_profiles(self) -> list[InfluencerProfile]:
-        data = [
-            ("Saudi Football Daily", "@SFD_News", InfluencerType.JOURNALIST, 450000, ["ar", "en"]),
-            ("SPL Insider", "@SPL_Insider", InfluencerType.JOURNALIST, 380000, ["ar"]),
-            ("Al Hilal Fan TV", "@AlHilalFanTV", InfluencerType.CREATOR, 620000, ["ar"]),
-            ("Arabic Football Analysis", "@AFA_Analysis", InfluencerType.ANALYST, 290000, ["ar", "en"]),
-            ("خالد الغامدي", "@khaled_ghamdi", InfluencerType.FORMER_PLAYER, 890000, ["ar"]),
-            ("محمد العويس", "@m_alowais", InfluencerType.FORMER_PLAYER, 1200000, ["ar"]),
-            ("Al Nassr Official", "@AlNassrFC", InfluencerType.CLUB_ACCOUNT, 5500000, ["ar", "en"]),
-            ("Al Hilal Official", "@Alhilal_EN", InfluencerType.CLUB_ACCOUNT, 7200000, ["ar", "en"]),
-            ("SFC Media Network", "@SFC_Media", InfluencerType.MEDIA_ORG, 340000, ["ar"]),
-            ("Saudi Sports TV", "@SaudiSportsTV", InfluencerType.MEDIA_ORG, 780000, ["ar"]),
-            ("Gulf Football Review", "@GFR_News", InfluencerType.JOURNALIST, 210000, ["ar", "en"]),
-            ("Transfer Arabia", "@TransferArabia", InfluencerType.CREATOR, 560000, ["ar"]),
-        ]
+        from sfc.data.fixtures.loader import get_fixture_loader
+        loader = get_fixture_loader()
 
         profiles = []
-        for name, handle, itype, followers, langs in data:
+        for name, handle, itype, followers, langs in _INFLUENCER_DATA:
+            fixture = loader.get_influencer_profile(handle)
+            influence_score: float = float(fixture.get("influence_score", min(followers / 100000 * 13, 95.0)))
+            trust_score: float = float(fixture.get("trust_score", min(followers / 100000 * 11, 90.0)))
+            velocity_score: float = float(fixture.get("velocity_score", min(followers / 100000 * 10, 85.0)))
+            authority_score: float = float(fixture.get("authority_score", min(followers / 100000 * 12, 92.0)))
+            engagement_rate: float = float(fixture.get("engagement_rate", 0.048))
+
             metrics = InfluencerMetrics(
-                influence_score=random.uniform(55, 95),
-                trust_score=random.uniform(50, 90),
+                influence_score=round(influence_score, 1),
+                trust_score=round(trust_score, 1),
                 reach_score=min(followers / 100000 * 10, 100),
-                velocity_score=random.uniform(40, 85),
-                authority_score=random.uniform(45, 92),
-                engagement_rate=random.uniform(0.02, 0.12),
+                velocity_score=round(velocity_score, 1),
+                authority_score=round(authority_score, 1),
+                engagement_rate=round(engagement_rate, 4),
             )
             profiles.append(
                 InfluencerProfile(

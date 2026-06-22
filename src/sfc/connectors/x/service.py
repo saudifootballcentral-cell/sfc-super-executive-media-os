@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import random
 from datetime import datetime
 from typing import Any
 
@@ -26,6 +25,10 @@ from sfc.connectors.x.models import (
 logger = logging.getLogger("sfc.connectors.x")
 
 _singleton: "XService | None" = None
+
+_POST_ID_COUNTER = 100_000_000_000_000_000
+_MEDIA_ID_COUNTER = 100_000_000_000_000
+_SCHED_ID_COUNTER = 1_000_000_000_000
 
 
 def get_x_service() -> "XService":
@@ -52,6 +55,9 @@ class XService:
         self._observability = ConnectorObservability(connector="x")
         self._post_history: list[XPost] = []
         self._thread_history: list[XThread] = []
+        self._post_counter = 0
+        self._media_counter = 0
+        self._sched_counter = 0
         self._monitor_config = XMonitorConfig(
             keywords=["السعودي", "الدوري", "SFC", "SPL"],
             hashtags=["#الدوري_السعودي", "#SaudiFootball", "#SPL"],
@@ -70,7 +76,8 @@ class XService:
     ) -> XPost:
         try:
             self._validate_text(text)
-            platform_id = f"x_{random.randint(10**17, 10**18)}"
+            self._post_counter += 1
+            platform_id = f"x_{_POST_ID_COUNTER + self._post_counter}"
             post = XPost(
                 text=text,
                 media_ids=media_ids or [],
@@ -81,7 +88,7 @@ class XService:
                 reply_to_id=reply_to_id,
             )
             self._post_history.append(post)
-            self._observability.record_success(latency_ms=random.uniform(100, 400))
+            self._observability.record_success(latency_ms=220.0)
             logger.info("[X] Post published | id=%s chars=%d", platform_id, len(text))
             return post
         except Exception as exc:
@@ -121,13 +128,14 @@ class XService:
         self, file_url: str, media_type: XMediaType = XMediaType.IMAGE, alt_text: str = ""
     ) -> XMedia:
         try:
+            self._media_counter += 1
             media = XMedia(
-                platform_media_id=f"media_{random.randint(10**14, 10**15)}",
+                platform_media_id=f"media_{_MEDIA_ID_COUNTER + self._media_counter}",
                 media_type=media_type,
                 file_url=file_url,
                 alt_text=alt_text,
             )
-            self._observability.record_success(latency_ms=random.uniform(200, 1000))
+            self._observability.record_success(latency_ms=580.0)
             logger.info("[X] Media uploaded | type=%s", media_type.value)
             return media
         except Exception as exc:
@@ -137,14 +145,15 @@ class XService:
     async def schedule_post(self, text: str, scheduled_at: datetime) -> XPost:
         try:
             self._validate_text(text)
+            self._sched_counter += 1
             post = XPost(
                 text=text,
                 status=XPostStatus.SCHEDULED,
                 scheduled_at=scheduled_at,
-                platform_post_id=f"sched_{random.randint(10**12, 10**13)}",
+                platform_post_id=f"sched_{_SCHED_ID_COUNTER + self._sched_counter}",
             )
             self._post_history.append(post)
-            self._observability.record_success(latency_ms=random.uniform(80, 200))
+            self._observability.record_success(latency_ms=130.0)
             logger.info("[X] Post scheduled | at=%s", scheduled_at.isoformat())
             return post
         except Exception as exc:
@@ -157,21 +166,25 @@ class XService:
 
     async def get_metrics(self, post_id: str) -> XMetrics:
         try:
+            from sfc.data.fixtures.loader import get_fixture_loader
+            loader = get_fixture_loader()
+            data = loader.get_x_post_metrics("default")
+
             metrics = XMetrics(
                 post_id=post_id,
                 platform_post_id=post_id,
-                views=random.randint(500, 500_000),
-                likes=random.randint(10, 10_000),
-                retweets=random.randint(5, 2_000),
-                quote_tweets=random.randint(1, 500),
-                replies=random.randint(2, 1_000),
-                bookmarks=random.randint(5, 5_000),
-                impressions=random.randint(1_000, 1_000_000),
-                profile_visits=random.randint(50, 5_000),
-                link_clicks=random.randint(10, 2_000),
-                engagement_rate=round(random.uniform(1.5, 12.0), 2),
+                views=int(data.get("views", 28000)),
+                likes=int(data.get("likes", 840)),
+                retweets=int(data.get("retweets", 280)),
+                quote_tweets=int(data.get("quote_tweets", 52)),
+                replies=int(data.get("replies", 98)),
+                bookmarks=int(data.get("bookmarks", 180)),
+                impressions=int(data.get("impressions", 72000)),
+                profile_visits=int(data.get("profile_visits", 420)),
+                link_clicks=int(data.get("link_clicks", 240)),
+                engagement_rate=float(data.get("engagement_rate", 3.8)),
             )
-            self._observability.record_success(latency_ms=random.uniform(80, 200))
+            self._observability.record_success(latency_ms=140.0)
             return metrics
         except Exception as exc:
             self._observability.record_failure(str(exc))
@@ -192,15 +205,15 @@ class XService:
                     XConversation(
                         topic=f"{query} conversation {i+1}",
                         keyword=query,
-                        participant_count=random.randint(5, 500),
-                        total_impressions=random.randint(1_000, 100_000),
+                        participant_count=50 + i * 120,
+                        total_impressions=8000 + i * 15000,
                         sentiment=sentiments[i % len(sentiments)],
                         posts=[
                             {"text": f"Mock post about {query} #{i}", "author": f"@user_{i}"}
                         ],
                     )
                 )
-            self._observability.record_success(latency_ms=random.uniform(100, 300))
+            self._observability.record_success(latency_ms=175.0)
             return conversations
         except Exception as exc:
             self._observability.record_failure(str(exc))
@@ -225,20 +238,29 @@ class XService:
         self, terms: list[str], trend_type: str = "hashtag"
     ) -> list[XTrend]:
         try:
+            from sfc.data.fixtures.loader import get_fixture_loader
+            loader = get_fixture_loader()
+            fixture_trends = {t["term"]: t for t in loader.get_trends()}
+
             trends: list[XTrend] = []
             for term in terms:
-                volume = random.randint(500, 500_000)
+                fixture = fixture_trends.get(term, {})
+                volume = int(fixture.get("tweet_volume", 10000))
+                velocity = float(fixture.get("velocity", 2.5))
+                sentiment = str(fixture.get("sentiment", "neutral"))
+                relevance = float(fixture.get("relevance_score", 75.0))
+
                 trends.append(
                     XTrend(
                         term=term,
                         tweet_volume=volume,
                         trend_type=trend_type,
-                        velocity=round(random.uniform(0.5, 10.0), 2),
-                        sentiment=random.choice(["positive", "neutral", "excited"]),
-                        relevance_score=round(random.uniform(60, 99), 1),
+                        velocity=velocity,
+                        sentiment=sentiment,
+                        relevance_score=relevance,
                     )
                 )
-            self._observability.record_success(latency_ms=random.uniform(80, 200))
+            self._observability.record_success(latency_ms=140.0)
             return sorted(trends, key=lambda t: t.tweet_volume, reverse=True)
         except Exception as exc:
             self._observability.record_failure(str(exc))

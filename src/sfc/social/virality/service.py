@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import random
 from typing import Any
 
 from sfc.social.virality.models import (
@@ -17,6 +16,39 @@ from sfc.social.virality.models import (
 logger = logging.getLogger("sfc.social.virality")
 
 _singleton: "ViralityPredictionEngine | None" = None
+
+_ENGAGEMENT_RATE_BY_FORMAT: dict[str, float] = {
+    ContentFormat.SHORT_VIDEO.value: 0.062,
+    ContentFormat.LIVE.value: 0.071,
+    ContentFormat.CAROUSEL.value: 0.048,
+    ContentFormat.IMAGE.value: 0.038,
+    ContentFormat.TEXT.value: 0.022,
+    ContentFormat.LONG_VIDEO.value: 0.031,
+    ContentFormat.STORY.value: 0.041,
+    ContentFormat.THREAD.value: 0.028,
+}
+
+_SHARES_RATE_BY_FORMAT: dict[str, float] = {
+    ContentFormat.SHORT_VIDEO.value: 0.014,
+    ContentFormat.LIVE.value: 0.011,
+    ContentFormat.CAROUSEL.value: 0.009,
+    ContentFormat.IMAGE.value: 0.007,
+    ContentFormat.TEXT.value: 0.006,
+    ContentFormat.LONG_VIDEO.value: 0.008,
+    ContentFormat.STORY.value: 0.005,
+    ContentFormat.THREAD.value: 0.009,
+}
+
+_WATCH_TIME_BY_FORMAT: dict[str, float] = {
+    ContentFormat.SHORT_VIDEO.value: 22.0,
+    ContentFormat.LONG_VIDEO.value: 148.0,
+    ContentFormat.LIVE.value: 320.0,
+    ContentFormat.IMAGE.value: 8.0,
+    ContentFormat.TEXT.value: 12.0,
+    ContentFormat.CAROUSEL.value: 18.0,
+    ContentFormat.STORY.value: 9.0,
+    ContentFormat.THREAD.value: 35.0,
+}
 
 
 def get_virality_engine() -> "ViralityPredictionEngine":
@@ -57,15 +89,21 @@ class ViralityPredictionEngine:
         expected_reach = self._estimate_reach(virality_score, platform)
         probability = min(virality_score / 100, 0.98)
 
+        fmt_val = content_format.value if hasattr(content_format, "value") else str(content_format)
+        engagement_rate = _ENGAGEMENT_RATE_BY_FORMAT.get(fmt_val, 0.035)
+        shares_rate = _SHARES_RATE_BY_FORMAT.get(fmt_val, 0.008)
+        watch_time = _WATCH_TIME_BY_FORMAT.get(fmt_val, 20.0)
+        follower_growth_rate = 0.002
+
         metrics = ViralityMetrics(
             virality_score=round(virality_score, 1),
             probability=round(probability, 2),
             expected_reach=expected_reach,
-            expected_engagement=round(expected_reach * random.uniform(0.02, 0.08), 0),
-            expected_shares=int(expected_reach * random.uniform(0.005, 0.02)),
-            expected_views=int(expected_reach * random.uniform(1.5, 3.0)),
-            expected_watch_time_seconds=random.uniform(15, 90),
-            expected_follower_growth=int(expected_reach * random.uniform(0.001, 0.005)),
+            expected_engagement=round(expected_reach * engagement_rate, 0),
+            expected_shares=int(expected_reach * shares_rate),
+            expected_views=int(expected_reach * 2.1),
+            expected_watch_time_seconds=watch_time,
+            expected_follower_growth=int(expected_reach * follower_growth_rate),
         )
 
         optimal_time = self._get_optimal_post_time(platform)
@@ -149,7 +187,8 @@ class ViralityPredictionEngine:
         }.get(content_format, 1.0)
 
         sentiment_boost = 1.0 + abs(sentiment_score) * 0.3
-        base = trend_score * 0.6 + random.uniform(10, 30)
+        # Deterministic base: 20 pts fixed floor + trend contribution
+        base = trend_score * 0.6 + 20.0
         return min(base * format_boost * sentiment_boost, 100.0)
 
     def _estimate_reach(self, virality_score: float, platform: str) -> int:
@@ -162,7 +201,8 @@ class ViralityPredictionEngine:
         }
         multiplier = platform_multipliers.get(platform.lower(), 1.0)
         base_reach = int(virality_score ** 2 * 500)
-        return int(base_reach * multiplier * random.uniform(0.7, 1.4))
+        # Use fixed 1.0 multiplier (centre of original range 0.7-1.4)
+        return int(base_reach * multiplier * 1.05)
 
     def _get_optimal_post_time(self, platform: str) -> str:
         times = {
