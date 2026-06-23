@@ -1,0 +1,11 @@
+# Railway configuration — SFC Super Executive Media OS
+# https://docs.railway.app/reference/config-as-code
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "python scripts/run_demo.py --scenario transfer"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
