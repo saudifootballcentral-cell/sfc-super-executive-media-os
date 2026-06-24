@@ -11,6 +11,22 @@ class TestDockerfile:
     def test_root_dockerfile_exists(self) -> None:
         assert (ROOT / "Dockerfile").exists(), "Dockerfile missing at repo root — Railway will not auto-detect it"
 
+    def test_dockerfile_no_editable_install(self) -> None:
+        content = (ROOT / "Dockerfile").read_text()
+        assert "pip install -e" not in content, (
+            "Editable install (-e) in Dockerfile creates a .pth file with the build-time "
+            "absolute path. That path does not exist in the production stage, causing "
+            "'No module named sfc'. Use 'pip install .' instead."
+        )
+
+    def test_dockerfile_package_installed_in_builder(self) -> None:
+        content = (ROOT / "Dockerfile").read_text()
+        builder_section = content.split("# ---- Stage 2")[0]
+        assert "pip install" in builder_section and "pyproject.toml" in builder_section, (
+            "The sfc package must be installed in the builder stage so the venv is "
+            "self-contained when copied to the production stage."
+        )
+
     def test_dockerfile_installs_ffmpeg(self) -> None:
         content = (ROOT / "Dockerfile").read_text()
         assert "ffmpeg" in content, "ffmpeg not installed in Dockerfile — Video Intelligence live mode requires it"
