@@ -1,11 +1,14 @@
 # Railway configuration — SFC Super Executive Media OS
-# https://docs.railway.app/reference/config-as-code
+# https://docs.railway.com/reference/config-as-code
+#
+# builder = "DOCKERFILE" (uppercase) is required — lowercase is not recognised
+# and causes Railway to fall back to Railpack/Nixpacks auto-detection.
 
 [build]
-builder = "dockerfile"
+builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "python scripts/run_demo.py --scenario transfer"
-restartPolicyType = "on_failure"
+restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3

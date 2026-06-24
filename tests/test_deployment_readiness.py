@@ -57,14 +57,29 @@ class TestRailwayConfig:
     def test_railway_toml_exists(self) -> None:
         assert (ROOT / "railway.toml").exists(), "railway.toml missing — Railway won't know which Dockerfile to use"
 
-    def test_railway_toml_specifies_dockerfile(self) -> None:
+    def test_railway_toml_builder_uppercase(self) -> None:
         content = (ROOT / "railway.toml").read_text()
-        assert "dockerfile" in content.lower(), "railway.toml must specify dockerfile builder"
-        assert "Dockerfile" in content, "railway.toml must reference root Dockerfile"
+        # Railway requires uppercase enum values. Lowercase "dockerfile" is not recognised
+        # and causes Railway to fall back to Railpack/Nixpacks auto-detection.
+        assert 'builder = "DOCKERFILE"' in content, (
+            'railway.toml must use builder = "DOCKERFILE" (uppercase). '
+            'Lowercase "dockerfile" is silently ignored and Railway falls back to Railpack.'
+        )
+
+    def test_railway_toml_specifies_dockerfile_path(self) -> None:
+        content = (ROOT / "railway.toml").read_text()
+        assert "dockerfilePath" in content, "railway.toml must set dockerfilePath"
+        assert '"Dockerfile"' in content, "dockerfilePath must point to root Dockerfile"
 
     def test_railway_toml_has_start_command(self) -> None:
         content = (ROOT / "railway.toml").read_text()
         assert "startCommand" in content, "railway.toml must define startCommand"
+
+    def test_railway_toml_restart_policy_uppercase(self) -> None:
+        content = (ROOT / "railway.toml").read_text()
+        assert "ON_FAILURE" in content, (
+            'restartPolicyType must be "ON_FAILURE" (uppercase) — Railway enum values are case-sensitive.'
+        )
 
 
 class TestHealthCheck:
