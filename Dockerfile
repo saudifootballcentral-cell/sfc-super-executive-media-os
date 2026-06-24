@@ -18,9 +18,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
+# Install third-party dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
+
+# Install the sfc package — non-editable so it is copied into site-packages.
+# An editable install (-e) writes a .pth file with the build-time absolute path,
+# which breaks when the venv is copied into the production stage at a different path.
+COPY src/ ./src/
+COPY pyproject.toml .
+RUN pip install --no-cache-dir .
 
 
 # ---- Stage 2: production image ----
@@ -58,9 +66,6 @@ COPY constitution/ ./constitution/
 COPY config/ ./config/
 COPY scripts/ ./scripts/
 COPY pyproject.toml .
-
-# Install package
-RUN pip install --no-cache-dir -e .
 
 # Create runtime artifact directories owned by non-root user
 RUN mkdir -p \
