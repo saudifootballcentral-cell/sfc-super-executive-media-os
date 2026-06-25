@@ -4,7 +4,7 @@ Buffer API Keys authenticate against the GraphQL endpoint, not the legacy REST A
 REST API (api.bufferapp.com/1) only accepts OAuth tokens; it rejects API Keys with
 "Public API tokens are not accepted for REST API access".
 
-Endpoint : https://api.bufferapp.com/graphql
+Endpoint : https://api.buffer.com
 Auth     : Authorization: Bearer <BUFFER_ACCESS_TOKEN>
 Dry-run  : when LIVE_PUBLISHING_ENABLED=false, no network calls are made.
 """
@@ -20,7 +20,7 @@ import httpx
 
 logger = logging.getLogger("sfc.connectors.buffer.graphql_client")
 
-_BUFFER_GRAPHQL_URL = "https://api.bufferapp.com/graphql"
+_BUFFER_GRAPHQL_URL = "https://api.buffer.com"
 _DEFAULT_TIMEOUT = 30.0
 
 # ---------------------------------------------------------------------------
