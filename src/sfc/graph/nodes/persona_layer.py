@@ -28,6 +28,15 @@ logger = logging.getLogger("sfc.graph.nodes.persona_layer")
 
 # Persona ID → (module_path, class_name) for instantiation
 _PERSONA_CLASSES: dict[str, tuple[str, str]] = {
+    # Registry seed persona IDs — recommended by PersonaRecommendationEngine when
+    # PersonaRegistry._seed_defaults() profiles are selected. Mapped to the concrete
+    # implementation class that best matches each seed's role/category.
+    "PERSONA-JOURNALIST-01": ("sfc.personas.sports.journalist_intelligence.service", "JournalistIntelligencePersona"),
+    "PERSONA-ANALYST-01": ("sfc.personas.sports.performance_science.service", "PerformanceSciencePersona"),
+    "PERSONA-CREATIVE-01": ("sfc.personas.media.graphics.service", "GraphicsPersona"),
+    "PERSONA-GOVERNANCE-01": ("sfc.personas.sports.referee_analysis.service", "RefereeAnalysisPersona"),
+    "PERSONA-REVENUE-01": ("sfc.personas.sports.transfer.service", "TransferPersona"),
+    "PERSONA-STRATEGIST-01": ("sfc.personas.sports.tactical.service", "TacticalPersona"),
     # Sports personas
     "SPORT-NATL-TEAM-01": ("sfc.personas.sports.national_team.service", "NationalTeamPersona"),
     "SPORT-SPL-01": ("sfc.personas.sports.spl.service", "SPLPersona"),

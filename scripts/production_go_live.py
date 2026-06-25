@@ -578,9 +578,14 @@ async def phase_iii_publishing_infra(report: GoLiveReport, phase_i: PhaseResult)
         if effective_x_id:
             phase.details["x_profile_id"] = effective_x_id
             _ok(f"X profile discovered: {effective_x_id}")
+        elif not os.environ.get("BUFFER_ACCESS_TOKEN", ""):
+            # No Buffer token — cannot query channels. Phase VI will enforce this gate.
+            phase.warn("X profile_id unknown — BUFFER_ACCESS_TOKEN not set; set BUFFER_X_PROFILE_ID for Phase VI")
+            _warn("X profile: WARN — no Buffer token; Phase VI will require BUFFER_X_PROFILE_ID or live Buffer connection")
         else:
-            phase.fail("X profile_id could not be determined — required for Phase VI")
-            _fail("X profile: FAIL — no profile_id available for X")
+            # Token present but X channel not connected in Buffer account
+            phase.fail("X (Twitter) channel not connected in Buffer — required for Phase VI publication")
+            _fail("X profile: FAIL — X channel not connected in Buffer account")
 
         # 3. Dry-run a BufferPost construction
         _print("  Constructing test BufferPost (dry run)…")
@@ -702,23 +707,34 @@ async def phase_iv_audit(report: GoLiveReport) -> PhaseResult:
     # 2. ContentItem publishability gate
     _print("  Auditing ContentItem.is_publishable gate…")
     try:
-        from sfc.core.models import ContentItem  # type: ignore[import]
-        # Create a test item with insufficient sources (should block publishing)
-        test_item = ContentItem(
-            title="Test",
-            content="Test",
-            sources=["single_source"],
+        from sfc.core.models import ContentItem, Source
+        # Single-source item must be blocked (constitutional: min 2 sources)
+        test_single = ContentItem(
+            title="Audit Test",
+            body="Audit test content",
+            content_type="article",
+            sources=[Source(name="single_source")],
         )
-        if not test_item.is_publishable:
-            audit_items["content_gate"] = "PASS — blocks with <2 sources"
-            _ok("ContentItem.is_publishable: PASS — single source correctly blocked")
-        else:
+        # Two-source item must be allowed
+        test_dual = ContentItem(
+            title="Audit Test",
+            body="Audit test content",
+            content_type="article",
+            sources=[Source(name="Source A"), Source(name="Source B")],
+        )
+        if not test_single.is_publishable and test_dual.is_publishable:
+            audit_items["content_gate"] = "PASS — blocks <2 sources, allows ≥2 sources"
+            _ok("ContentItem.is_publishable: PASS — source gate enforced correctly")
+        elif test_single.is_publishable:
             phase.fail("ContentItem.is_publishable ALLOWS content with <2 sources — constitutional violation")
-            audit_items["content_gate"] = "FAIL — insufficient source enforcement"
-            _fail("ContentItem.is_publishable: FAIL — gate not enforced")
+            audit_items["content_gate"] = "FAIL — single source not blocked"
+            _fail("ContentItem.is_publishable: FAIL — source gate not enforced")
+        else:
+            phase.fail("ContentItem.is_publishable BLOCKS content with 2+ sources — gate too strict")
+            audit_items["content_gate"] = "FAIL — valid dual-source content blocked"
+            _fail("ContentItem.is_publishable: FAIL — gate over-restrictive")
     except ImportError:
-        # Model may be defined differently
-        audit_items["content_gate"] = "SKIP — ContentItem not importable at this path"
+        audit_items["content_gate"] = "SKIP — ContentItem not importable"
         _warn("ContentItem audit: SKIP — import path needs verification")
     except Exception as exc:
         audit_items["content_gate"] = f"WARN — {exc}"

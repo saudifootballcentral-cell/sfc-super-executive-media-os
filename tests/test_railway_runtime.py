@@ -182,6 +182,123 @@ class TestBreakingNewsCommandCenterLifecycle:
 # 4. Sanitize payload — final guard before Anthropic API call
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# 5. ContentItem.is_publishable — constitutional verification gate
+# ---------------------------------------------------------------------------
+
+class TestContentItemIsPublishable:
+    """ContentItem.is_publishable must gate on len(sources) >= 2 (CLAUDE.md)."""
+
+    def test_single_source_blocked(self) -> None:
+        from sfc.core.models import ContentItem, Source
+        item = ContentItem(
+            title="Test",
+            body="Test body",
+            content_type="article",
+            sources=[Source(name="Only Source")],
+        )
+        assert not item.is_publishable
+
+    def test_two_sources_allowed(self) -> None:
+        from sfc.core.models import ContentItem, Source
+        item = ContentItem(
+            title="Test",
+            body="Test body",
+            content_type="article",
+            sources=[Source(name="Source A"), Source(name="Source B")],
+        )
+        assert item.is_publishable
+
+    def test_zero_sources_blocked(self) -> None:
+        from sfc.core.models import ContentItem
+        item = ContentItem(title="T", body="B", content_type="article")
+        assert not item.is_publishable
+
+    def test_three_sources_allowed(self) -> None:
+        from sfc.core.models import ContentItem, Source
+        item = ContentItem(
+            title="T",
+            body="B",
+            content_type="article",
+            sources=[Source(name="A"), Source(name="B"), Source(name="C")],
+        )
+        assert item.is_publishable
+
+    def test_is_publishable_independent_of_status(self) -> None:
+        from sfc.core.models import ContentItem, ContentStatus, Source
+        item = ContentItem(
+            title="T",
+            body="B",
+            content_type="article",
+            status=ContentStatus.DRAFT,
+            sources=[Source(name="A"), Source(name="B")],
+        )
+        # is_publishable only checks sources — status is passes_governance's concern
+        assert item.is_publishable
+
+
+# ---------------------------------------------------------------------------
+# 6. Persona class map — registry seed IDs must be resolvable
+# ---------------------------------------------------------------------------
+
+class TestPersonaClassMap:
+    """All PERSONA-* seed IDs must be in _PERSONA_CLASSES and instantiable."""
+
+    _SEED_PERSONA_IDS = [
+        "PERSONA-JOURNALIST-01",
+        "PERSONA-ANALYST-01",
+        "PERSONA-CREATIVE-01",
+        "PERSONA-GOVERNANCE-01",
+        "PERSONA-REVENUE-01",
+        "PERSONA-STRATEGIST-01",
+    ]
+
+    def test_all_seed_ids_in_class_map(self) -> None:
+        from sfc.graph.nodes.persona_layer import _PERSONA_CLASSES
+        missing = [pid for pid in self._SEED_PERSONA_IDS if pid not in _PERSONA_CLASSES]
+        assert missing == [], f"Seed persona IDs missing from class map: {missing}"
+
+    def test_all_seed_personas_instantiate(self) -> None:
+        from sfc.graph.nodes.persona_layer import _instantiate_persona
+        for pid in self._SEED_PERSONA_IDS:
+            persona = _instantiate_persona(pid)
+            assert persona is not None, f"{pid} could not be instantiated"
+
+    def test_journalist_persona_has_analyze(self) -> None:
+        from sfc.graph.nodes.persona_layer import _instantiate_persona
+        persona = _instantiate_persona("PERSONA-JOURNALIST-01")
+        assert hasattr(persona, "analyze"), "persona must have analyze() method"
+
+    def test_journalist_analyze_returns_dict(self) -> None:
+        from sfc.graph.nodes.persona_layer import _instantiate_persona
+        persona = _instantiate_persona("PERSONA-JOURNALIST-01")
+
+        async def _run() -> dict:
+            return await persona.analyze({"task_type": "breaking_news", "topic": "Al Hilal"})
+
+        result = asyncio.run(_run())
+        assert isinstance(result, dict)
+
+    def test_pipeline_emits_no_not_found_warning_for_breaking_news(self) -> None:
+        import logging
+        from sfc.graph.nodes.persona_layer import _instantiate_persona
+
+        captured: list[str] = []
+
+        class _Cap(logging.Handler):
+            def emit(self, record: logging.LogRecord) -> None:
+                captured.append(record.getMessage())
+
+        handler = _Cap()
+        logging.getLogger("sfc.graph.nodes.persona_layer").addHandler(handler)
+        try:
+            _instantiate_persona("PERSONA-JOURNALIST-01")
+            warnings = [m for m in captured if "not found in class map" in m]
+            assert warnings == [], f"not-found warnings still logged: {warnings}"
+        finally:
+            logging.getLogger("sfc.graph.nodes.persona_layer").removeHandler(handler)
+
+
 class TestSanitizePayloadFinalGuard:
     """_sanitize_payload is the last line of defence before messages.create()."""
 
