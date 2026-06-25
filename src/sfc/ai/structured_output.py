@@ -17,13 +17,21 @@ logger = logging.getLogger("sfc.ai.structured_output")
 # ---------------------------------------------------------------------------
 
 class ExecutiveDecisionAI(BaseModel):
-    task_analysis: str
-    priority: str  # critical|high|medium|low
-    risk_level: str  # critical|high|medium|low
-    recommended_divisions: list[str]
-    content_strategy: str
-    routing: str  # "planning" or "abort"
-    rationale: str
+    """Executive decision returned by the super-executive node.
+
+    All fields have defaults so that partial Claude responses still validate
+    (7-field validation failures caused by field-name mismatches are recovered
+    by the explicit JSON template in the prompt; these defaults are the safety net).
+    """
+    task_analysis: str = ""
+    priority: str = "medium"       # critical|high|medium|low
+    risk_level: str = "medium"     # critical|high|medium|low
+    recommended_divisions: list[str] = Field(
+        default_factory=lambda: ["intelligence", "editorial", "creative", "governance", "publishing"]
+    )
+    content_strategy: str = ""
+    routing: str = "planning"      # "planning" or "abort"
+    rationale: str = ""
     estimated_reach: int = 0
     revenue_opportunity: bool = False
 

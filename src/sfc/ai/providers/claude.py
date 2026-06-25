@@ -19,17 +19,42 @@ _DEFAULT_MAX_RETRIES = 3
 
 # All Claude 4.x models (e.g. claude-opus-4-8, claude-sonnet-4-6, claude-haiku-4-5-*)
 # and the Claude 5 family (Fable 5, Mythos 5) reject temperature/top_p/top_k (HTTP 400).
-_CLAUDE_4X_RE = re.compile(r"^claude-[a-z]+-4-")
+_CLAUDE_4X_RE = re.compile(r"^claude-[a-z]+-4[-.]")
 _NO_SAMPLING_PARAMS_PREFIXES = (
     "claude-fable-5",
     "claude-mythos-5",
+    "claude-opus-4",
+    "claude-sonnet-4",
+    "claude-haiku-4",
+)
+
+# Error substrings that indicate a permanent, non-retriable failure.
+_PERMANENT_ERROR_PATTERNS = (
+    "temperature is deprecated",
+    "top_p is deprecated",
+    "top_k is deprecated",
+    "invalid_request_error",
+    "not supported for this model",
+    "deprecated for this model",
 )
 
 
 def _supports_temperature(model: str) -> bool:
+    """Return True only for pre-4.x Claude models that still accept temperature."""
     if _CLAUDE_4X_RE.match(model):
         return False
-    return not any(model.startswith(prefix) for prefix in _NO_SAMPLING_PARAMS_PREFIXES)
+    if any(model.startswith(prefix) for prefix in _NO_SAMPLING_PARAMS_PREFIXES):
+        return False
+    return True
+
+
+def _is_permanent_error(exc: Exception) -> bool:
+    """Return True for errors that must not be retried (4xx, deprecated params)."""
+    status = getattr(exc, "status_code", None)
+    if status in (400, 401, 403):
+        return True
+    msg = str(exc).lower()
+    return any(pat in msg for pat in _PERMANENT_ERROR_PATTERNS)
 
 
 class ClaudeProvider(AIProvider):
@@ -87,6 +112,12 @@ class ClaudeProvider(AIProvider):
                 }
                 if _supports_temperature(model):
                     create_kwargs["temperature"] = request.temperature
+
+                logger.debug(
+                    "[Claude] %s payload_keys=%s temperature_included=%s",
+                    model, sorted(create_kwargs.keys()), "temperature" in create_kwargs,
+                )
+
                 message = await asyncio.wait_for(
                     client.messages.create(**create_kwargs),
                     timeout=timeout,
@@ -132,6 +163,18 @@ class ClaudeProvider(AIProvider):
                     )
 
             except Exception as exc:
+                # Permanent errors (deprecated params, invalid request, auth) must not be retried.
+                if _is_permanent_error(exc):
+                    logger.error(
+                        "[Claude] Permanent error for %s (not retrying): %s",
+                        model, exc,
+                    )
+                    return ModelResponse(
+                        success=False,
+                        error=str(exc),
+                        provider="claude",
+                        model=model,
+                    )
                 wait = 2 ** attempt
                 logger.warning(
                     "[Claude] Attempt %d/%d failed: %s — retrying in %ds",

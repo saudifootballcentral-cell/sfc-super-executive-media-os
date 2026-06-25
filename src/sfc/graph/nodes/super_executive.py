@@ -96,7 +96,19 @@ async def _call_via_gateway(state: SFCState) -> dict[str, Any] | None:
             user_message=(
                 f"Analyze this incoming task and return your executive decision as JSON:\n\n"
                 f"{task_brief}\n\n"
-                "Return ONLY valid JSON matching the schema in your instructions."
+                "Return ONLY a valid JSON object with EXACTLY these fields "
+                "(no extra keys, no markdown, no explanation):\n"
+                "{\n"
+                '  "task_analysis": "<string: your analysis of this task>",\n'
+                '  "priority": "<critical|high|medium|low>",\n'
+                '  "risk_level": "<critical|high|medium|low>",\n'
+                '  "recommended_divisions": ["intelligence", "editorial", ...],\n'
+                '  "content_strategy": "<string: content approach>",\n'
+                '  "routing": "planning",\n'
+                '  "rationale": "<string: your reasoning>",\n'
+                '  "estimated_reach": <integer>,\n'
+                '  "revenue_opportunity": <true|false>\n'
+                "}"
             ),
             max_tokens=1024,
             temperature=0.3,
@@ -154,7 +166,19 @@ async def _call_claude(state: SFCState, api_key: str) -> dict[str, Any]:
                     "content": (
                         f"Analyze this incoming task and return your executive decision as JSON:\n\n"
                         f"{task_brief}\n\n"
-                        "Return ONLY valid JSON matching the schema in your instructions."
+                        "Return ONLY a valid JSON object with EXACTLY these fields "
+                        "(no extra keys, no markdown, no explanation):\n"
+                        "{\n"
+                        '  "task_analysis": "<string: your analysis>",\n'
+                        '  "priority": "<critical|high|medium|low>",\n'
+                        '  "risk_level": "<critical|high|medium|low>",\n'
+                        '  "recommended_divisions": ["intelligence", "editorial", ...],\n'
+                        '  "content_strategy": "<string: content approach>",\n'
+                        '  "routing": "planning",\n'
+                        '  "rationale": "<string: your reasoning>",\n'
+                        '  "estimated_reach": <integer>,\n'
+                        '  "revenue_opportunity": <true|false>\n'
+                        "}"
                     ),
                 }
             ],
