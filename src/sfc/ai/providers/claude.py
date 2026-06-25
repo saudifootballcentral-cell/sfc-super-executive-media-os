@@ -16,6 +16,18 @@ logger = logging.getLogger("sfc.ai.providers.claude")
 _DEFAULT_TIMEOUT = 30
 _DEFAULT_MAX_RETRIES = 3
 
+# Models that no longer accept temperature/top_p/top_k (returns HTTP 400)
+_NO_SAMPLING_PARAMS_PREFIXES = (
+    "claude-opus-4-7",
+    "claude-opus-4-8",
+    "claude-fable-5",
+    "claude-mythos-5",
+)
+
+
+def _supports_temperature(model: str) -> bool:
+    return not any(model.startswith(prefix) for prefix in _NO_SAMPLING_PARAMS_PREFIXES)
+
 
 class ClaudeProvider(AIProvider):
     """Async Claude provider using the anthropic library."""
@@ -64,14 +76,16 @@ class ClaudeProvider(AIProvider):
         for attempt in range(max_retries):
             try:
                 start_ms = time.monotonic()
+                create_kwargs: dict[str, Any] = {
+                    "model": model,
+                    "max_tokens": request.max_tokens,
+                    "system": request.system_prompt,
+                    "messages": [{"role": "user", "content": user_message}],
+                }
+                if _supports_temperature(model):
+                    create_kwargs["temperature"] = request.temperature
                 message = await asyncio.wait_for(
-                    client.messages.create(
-                        model=model,
-                        max_tokens=request.max_tokens,
-                        temperature=request.temperature,
-                        system=request.system_prompt,
-                        messages=[{"role": "user", "content": user_message}],
-                    ),
+                    client.messages.create(**create_kwargs),
                     timeout=timeout,
                 )
                 latency_ms = int((time.monotonic() - start_ms) * 1000)
