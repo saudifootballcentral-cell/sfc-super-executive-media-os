@@ -134,25 +134,21 @@ class TestBufferGraphQLClientLive:
         assert user.api_mode == "graphql"
 
     @pytest.mark.asyncio
-    async def test_validate_falls_back_to_alt_query_when_no_account(self) -> None:
+    async def test_validate_returns_none_when_account_empty(self) -> None:
+        # Buffer schema uses `account` — there is no `currentUser` fallback.
+        # When account data is missing, validate() returns None (no retry).
         client = _make_gql_client(live=True, token="live-api-key-abc")
-        # First query returns no account, second returns currentUser
-        responses = [
-            {},  # no account field
-            {"currentUser": {"id": "u99", "name": "Alt User", "email": "alt@x.com", "timezone": "UTC"}},
-        ]
         call_count = 0
 
         async def mock_query(gql: str, variables: Any = None) -> dict[str, Any]:
             nonlocal call_count
             call_count += 1
-            return responses[call_count - 1]
+            return {}  # no account field
 
         with patch.object(client, "query", side_effect=mock_query):
             user = await client.validate()
-        assert user is not None
-        assert user.user_id == "u99"
-        assert call_count == 2
+        assert user is None
+        assert call_count == 1  # single query, no fallback
 
     @pytest.mark.asyncio
     async def test_validate_returns_none_on_auth_error(self) -> None:
@@ -166,22 +162,40 @@ class TestBufferGraphQLClientLive:
 
     @pytest.mark.asyncio
     async def test_get_channels_parses_list(self) -> None:
+        # get_channels() is two-step: first fetch org IDs, then fetch channels per org.
+        # Channel type no longer has "handle"; "name" carries the platform username.
         client = _make_gql_client(live=True, token="live-api-key-abc")
-        mock_response = {
-            "account": {
-                "id": "acct1",
-                "channels": [
-                    {"id": "ch1", "service": "twitter", "name": "SFC X", "handle": "@sfc_x", "avatar": ""},
-                    {"id": "ch2", "service": "instagram", "name": "SFC IG", "handle": "@sfc_ig", "avatar": ""},
-                ],
-            }
-        }
-        with patch.object(client, "query", new=AsyncMock(return_value=mock_response)):
+
+        # Responses indexed by call order: [0]=account/org query, [1]=channels query
+        responses = [
+            # Step 1: account with one org
+            {"account": {"id": "acct1", "name": "SFC", "email": "sfc@x.com", "timezone": "UTC",
+                         "organizations": [{"id": "org1", "name": "SFC Org"}]}},
+            # Step 2: channels for org1
+            {"channels": [
+                {"id": "ch1", "service": "twitter", "name": "@sfc_x", "displayName": "SFC X", "avatar": "", "isQueuePaused": False},
+                {"id": "ch2", "service": "instagram", "name": "@sfc_ig", "displayName": "SFC IG", "avatar": "", "isQueuePaused": False},
+            ]},
+        ]
+        call_count = 0
+
+        async def mock_query(gql: str, variables: Any = None) -> dict[str, Any]:
+            nonlocal call_count
+            result = responses[call_count]
+            call_count += 1
+            return result
+
+        with patch.object(client, "query", side_effect=mock_query):
             channels = await client.get_channels()
+
         assert len(channels) == 2
         assert channels[0].channel_id == "ch1"
         assert channels[0].service == "twitter"
+        assert channels[0].name == "@sfc_x"
+        assert channels[0].display_name == "SFC X"
+        assert channels[0].handle == "@sfc_x"  # property alias for name
         assert channels[1].service == "instagram"
+        assert call_count == 2
 
 
 # ---------------------------------------------------------------------------

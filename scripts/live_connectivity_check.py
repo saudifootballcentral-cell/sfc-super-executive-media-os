@@ -3,6 +3,15 @@
 Verifies all external connectors are reachable and credentials are valid.
 Runs read-only checks ONLY. LIVE_PUBLISHING_ENABLED must remain false.
 
+Buffer GraphQL API notes (current schema):
+  - Endpoint  : https://api.buffer.com  (NOT api.bufferapp.com)
+  - Auth      : Authorization: Bearer <token>
+  - API Keys  : work on GraphQL ONLY — do not fall back to REST (REST rejects them)
+  - OAuth     : work on legacy REST ONLY (api.bufferapp.com/1) — GraphQL not yet supported
+  - Channel fields: id, name, displayName, service, avatar, isQueuePaused
+    ("handle" was removed from the Channel type; "name" = platform handle/username)
+  - Channel discovery: account { organizations { id } } → channels(input: { organizationId })
+
 Usage:
     python scripts/live_connectivity_check.py
 
@@ -97,89 +106,98 @@ async def check_anthropic() -> CheckResult:
 
 # ---------------------------------------------------------------------------
 # 2. Buffer authentication (direct HTTP, read-only, no publishing)
+#
+# Token routing:
+#   API Key (contains hyphen) → GraphQL ONLY (api.buffer.com)
+#   OAuth token (no hyphen)   → REST ONLY (api.bufferapp.com/1)
+#
+# Fallback strategy:
+#   API Key: try GraphQL → if structural error try REST (may explain token type)
+#   OAuth  : try REST → if 401/403 try GraphQL (user may have upgraded token type)
 # ---------------------------------------------------------------------------
 
 _BUFFER_GQL_URL = "https://api.buffer.com"
 _BUFFER_REST_BASE = "https://api.bufferapp.com/1"
 
-_QUERY_WHOAMI = """
-query SFCLiveCheck {
+# Auth-only query — validates token, returns account + org IDs (no Channel fields).
+# Channel discovery is separate (requires organizationId).
+_QUERY_AUTH = """
+query SFCAuth {
   account {
     id
     name
     email
     timezone
-    channels {
+    organizations {
       id
-      service
       name
-      handle
-      avatar
     }
   }
 }
 """
 
-_QUERY_WHOAMI_ALT = """
-query SFCLiveCheckAlt {
-  currentUser {
+# Channel discovery query — uses organizationId obtained from the auth query.
+# Current Channel fields: id, name, displayName, service, avatar, isQueuePaused
+# "handle" was removed from the Channel type; "name" is the platform handle/username.
+_QUERY_GET_CHANNELS = """
+query SFCGetChannels($organizationId: String!) {
+  channels(input: { organizationId: $organizationId }) {
     id
     name
-    email
-    timezone
+    displayName
+    service
+    avatar
+    isQueuePaused
   }
 }
 """
 
 
 def _is_api_key(token: str) -> bool:
-    """Buffer API Keys contain hyphens; OAuth tokens do not."""
+    """Buffer API Keys contain hyphens; legacy OAuth tokens do not."""
     return bool(token) and "-" in token
 
 
-async def _buffer_graphql_whoami(token: str) -> tuple[bool, dict[str, Any], str]:
-    """Direct GraphQL call to Buffer. Returns (success, data, error_msg)."""
+async def _gql_post(token: str, query: str, variables: dict[str, Any] | None = None) -> tuple[bool, dict[str, Any], str]:
+    """POST a GraphQL query to api.buffer.com. Returns (success, data, error_msg)."""
     import httpx
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
-    body = {"query": _QUERY_WHOAMI}
+    body: dict[str, Any] = {"query": query}
+    if variables:
+        body["variables"] = variables
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
             resp = await client.post(_BUFFER_GQL_URL, json=body, headers=headers)
-        if resp.status_code in (401, 403):
-            return False, {}, f"Auth rejected (HTTP {resp.status_code})"
+        if resp.status_code == 401:
+            return False, {}, f"HTTP 401 Unauthorized — check token is a valid Buffer API Key"
+        if resp.status_code == 403:
+            return False, {}, f"HTTP 403 Forbidden — token may lack required permissions"
         if resp.status_code != 200:
             return False, {}, f"HTTP {resp.status_code}: {resp.text[:200]}"
         data = resp.json()
-        if data.get("errors"):
-            msgs = "; ".join(e.get("message", str(e)) for e in data["errors"])
-            return False, {}, f"GraphQL errors: {msgs}"
-        payload = data.get("data", {})
-        account = payload.get("account") or {}
-        if not account:
-            # Try alt query
-            alt_body = {"query": _QUERY_WHOAMI_ALT}
-            async with httpx.AsyncClient(timeout=20.0) as client:
-                alt_resp = await client.post(_BUFFER_GQL_URL, json=alt_body, headers=headers)
-            if alt_resp.status_code == 200:
-                alt_data = alt_resp.json().get("data", {})
-                account = alt_data.get("currentUser", {})
-        return True, account, ""
+        errors = data.get("errors")
+        if errors:
+            msgs = "; ".join(e.get("message", str(e)) for e in errors)
+            return False, {}, f"GraphQL error: {msgs}"
+        return True, data.get("data", {}), ""
     except Exception as exc:
-        return False, {}, str(exc)
+        return False, {}, f"Connection error: {exc}"
 
 
 async def _buffer_rest_whoami(token: str) -> tuple[bool, dict[str, Any], str]:
-    """Direct REST call to Buffer v1. Returns (success, data, error_msg)."""
+    """GET api.bufferapp.com/1/user.json for OAuth tokens."""
     import httpx
     url = f"{_BUFFER_REST_BASE}/user.json"
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
             resp = await client.get(url, params={"access_token": token})
-        if resp.status_code in (401, 403):
-            return False, {}, f"Auth rejected (HTTP {resp.status_code})"
+        if resp.status_code == 401:
+            return False, {}, "HTTP 401 — OAuth token invalid or expired"
+        if resp.status_code == 403:
+            return False, {}, "HTTP 403 — OAuth token lacks permissions"
         if resp.status_code != 200:
             return False, {}, f"HTTP {resp.status_code}: {resp.text[:200]}"
         data = resp.json()
@@ -187,11 +205,11 @@ async def _buffer_rest_whoami(token: str) -> tuple[bool, dict[str, Any], str]:
             return False, {}, f"API error: {data['error']}"
         return True, data, ""
     except Exception as exc:
-        return False, {}, str(exc)
+        return False, {}, f"Connection error: {exc}"
 
 
 async def check_buffer_auth() -> CheckResult:
-    """Validate Buffer token via GraphQL (API Key) or REST (OAuth), read-only."""
+    """Validate Buffer token — API Keys use GraphQL, OAuth tokens use REST."""
     token = os.environ.get("BUFFER_ACCESS_TOKEN", "")
     if not token:
         return CheckResult(
@@ -201,28 +219,46 @@ async def check_buffer_auth() -> CheckResult:
         )
 
     t0 = time.monotonic()
-    token_type = "API Key (GraphQL)" if _is_api_key(token) else "OAuth (REST)"
+    is_key = _is_api_key(token)
+    token_type = "API Key" if is_key else "OAuth"
 
-    if _is_api_key(token):
-        ok, data, err = await _buffer_graphql_whoami(token)
-        if not ok:
-            # Fall back to REST
-            ok, data, err = await _buffer_rest_whoami(token)
+    if is_key:
+        # API Keys: GraphQL endpoint ONLY — REST rejects them
+        ok, data, err = await _gql_post(token, _QUERY_AUTH)
+        account = data.get("account", {}) if ok else {}
     else:
-        ok, data, err = await _buffer_rest_whoami(token)
+        # OAuth tokens: REST endpoint first, GraphQL as last resort
+        ok, account, err = await _buffer_rest_whoami(token)
         if not ok:
-            ok, data, err = await _buffer_graphql_whoami(token)
+            gql_ok, gql_data, gql_err = await _gql_post(token, _QUERY_AUTH)
+            if gql_ok:
+                ok, account, err = True, gql_data.get("account", {}), ""
+            else:
+                err = f"REST: {err} | GraphQL: {gql_err}"
 
     latency_ms = (time.monotonic() - t0) * 1000
 
-    if ok:
-        user_name = data.get("name", data.get("id", "unknown"))
-        user_email = data.get("email", "")
+    if ok and account:
+        user_name = account.get("name", account.get("id", "unknown"))
+        user_email = account.get("email", "")
+        orgs = account.get("organizations", [])
+        org_names = [o.get("name", o.get("id", "")) for o in orgs]
+        detail = f"Token accepted ({token_type}) — user: {user_name}"
+        if user_email:
+            detail += f" <{user_email}>"
+        if org_names:
+            detail += f" | orgs: {', '.join(org_names)}"
         return CheckResult(
             name="Buffer Authentication",
             status=PASS,
-            detail=f"Token accepted — user: {user_name} ({user_email}) via {token_type}",
-            data={"user_name": user_name, "user_email": user_email, "token_type": token_type},
+            detail=detail,
+            data={
+                "user_name": user_name,
+                "user_email": user_email,
+                "token_type": token_type,
+                "org_ids": [o.get("id", "") for o in orgs],
+                "org_names": org_names,
+            },
             latency_ms=latency_ms,
         )
     else:
@@ -245,18 +281,25 @@ _GQL_SERVICE_DISPLAY = {
     "instagram": "Instagram",
     "instagramBusiness": "Instagram Business",
     "instagramPersonal": "Instagram Personal",
+    "instagram-business": "Instagram Business",
+    "instagram-personal": "Instagram Personal",
     "facebook": "Facebook",
     "facebookPage": "Facebook Page",
+    "facebook-page": "Facebook Page",
     "tiktok": "TikTok",
     "tikTok": "TikTok",
     "linkedin": "LinkedIn",
     "linkedIn": "LinkedIn",
     "threads": "Threads",
+    "mastodon": "Mastodon",
+    "bluesky": "Bluesky",
+    "googlebusiness": "Google Business",
+    "pinterest": "Pinterest",
 }
 
 
-async def check_buffer_channels() -> CheckResult:
-    """Discover connected Buffer channels via GraphQL whoami (read-only)."""
+async def check_buffer_channels(auth_data: dict[str, Any]) -> CheckResult:
+    """Discover connected Buffer channels per org (read-only, no publishing)."""
     token = os.environ.get("BUFFER_ACCESS_TOKEN", "")
     if not token:
         return CheckResult(
@@ -265,45 +308,82 @@ async def check_buffer_channels() -> CheckResult:
             detail="BUFFER_ACCESS_TOKEN not configured — channel discovery skipped",
         )
 
+    # If auth already failed, no point continuing
+    org_ids = auth_data.get("org_ids", [])
+    if not org_ids and auth_data.get("token_type") == "OAuth":
+        # OAuth tokens may not support channel discovery via GraphQL
+        return CheckResult(
+            name="Buffer Channels",
+            status=SKIP,
+            detail="OAuth token — channel discovery requires org ID (not available via REST)",
+        )
+
     t0 = time.monotonic()
-    ok, account, err = await _buffer_graphql_whoami(token)
+    all_channels: list[dict[str, str]] = []
+    errors: list[str] = []
+
+    if not org_ids:
+        # Re-fetch org IDs if auth check didn't provide them
+        ok, data, err = await _gql_post(token, _QUERY_AUTH)
+        if not ok:
+            return CheckResult(
+                name="Buffer Channels",
+                status=FAIL,
+                detail=f"Cannot fetch org IDs for channel discovery: {err}",
+                latency_ms=(time.monotonic() - t0) * 1000,
+            )
+        org_ids = [o.get("id", "") for o in data.get("account", {}).get("organizations", [])]
+
+    for org_id in org_ids:
+        if not org_id:
+            continue
+        ok, data, err = await _gql_post(token, _QUERY_GET_CHANNELS, {"organizationId": org_id})
+        if not ok:
+            errors.append(f"org {org_id}: {err}")
+            continue
+        for ch in data.get("channels", []):
+            ch_id = ch.get("id", "")
+            if not ch_id:
+                continue
+            service_raw = ch.get("service", "")
+            platform = _GQL_SERVICE_DISPLAY.get(service_raw, service_raw or "Unknown")
+            # "name" = platform handle/username per Buffer schema
+            username = ch.get("name", "")
+            display = ch.get("displayName", username)
+            all_channels.append({
+                "platform": platform,
+                "service_raw": service_raw,
+                "handle": username,
+                "display_name": display,
+                "id": ch_id,
+            })
+
     latency_ms = (time.monotonic() - t0) * 1000
 
-    if not ok:
+    if not all_channels and errors:
         return CheckResult(
             name="Buffer Channels",
             status=FAIL,
-            detail=f"Channel discovery failed: {err}",
+            detail=f"Channel discovery failed for all orgs: {'; '.join(errors)}",
             latency_ms=latency_ms,
         )
 
-    channels = account.get("channels", [])
-    if not channels:
+    if not all_channels:
         return CheckResult(
             name="Buffer Channels",
             status=PASS,
-            detail="Account authenticated but no channels connected (or REST-only token)",
+            detail="Account authenticated but no channels connected yet",
             data={"channel_count": 0, "channels": []},
             latency_ms=latency_ms,
         )
 
-    channel_list = []
-    for ch in channels:
-        service = ch.get("service", "")
-        display = _GQL_SERVICE_DISPLAY.get(service, service)
-        handle = ch.get("handle") or ch.get("name", "")
-        channel_list.append({
-            "platform": display,
-            "handle": handle,
-            "id": ch.get("id", ""),
-        })
-
-    platforms = [c["platform"] for c in channel_list]
+    platforms = [c["platform"] for c in all_channels]
+    warnings = f" (some orgs failed: {'; '.join(errors)})" if errors else ""
     return CheckResult(
         name="Buffer Channels",
         status=PASS,
-        detail=f"{len(channel_list)} channel(s) discovered: {', '.join(platforms)}",
-        data={"channel_count": len(channel_list), "channels": channel_list},
+        detail=f"{len(all_channels)} channel(s) discovered: {', '.join(platforms)}{warnings}",
+        data={"channel_count": len(all_channels), "channels": all_channels},
         latency_ms=latency_ms,
     )
 
@@ -320,11 +400,12 @@ async def check_x_profile(buffer_channels_data: dict[str, Any]) -> CheckResult:
     channels = buffer_channels_data.get("channels", [])
     x_channels = [
         c for c in channels
-        if c.get("platform", "").lower() in ("x (twitter)", "x", "twitter")
+        if c.get("service_raw", "").lower() in ("x", "twitter")
+        or "twitter" in c.get("platform", "").lower()
     ]
 
     if x_channels:
-        handles = [c["handle"] for c in x_channels]
+        handles = [c["handle"] or c["display_name"] for c in x_channels]
         return CheckResult(
             name="X (Twitter) Profile",
             status=PASS,
@@ -363,10 +444,14 @@ async def check_youtube_profile(buffer_channels_data: dict[str, Any]) -> CheckRe
     yt_profile_id = os.environ.get("BUFFER_YOUTUBE_PROFILE_ID", "")
 
     channels = buffer_channels_data.get("channels", [])
-    yt_channels = [c for c in channels if "youtube" in c.get("platform", "").lower()]
+    yt_channels = [
+        c for c in channels
+        if "youtube" in c.get("service_raw", "").lower()
+        or "youtube" in c.get("platform", "").lower()
+    ]
 
     if yt_channels:
-        names = [c["handle"] for c in yt_channels]
+        names = [c["handle"] or c["display_name"] for c in yt_channels]
         return CheckResult(
             name="YouTube Profile",
             status=PASS,
@@ -513,7 +598,8 @@ def print_report(results: list[CheckResult]) -> bool:
         if result.status == PASS and result.data:
             if "channels" in result.data and result.data["channels"]:
                 for ch in result.data["channels"]:
-                    print(f"           • {ch['platform']}: {ch['handle']}")
+                    handle = ch.get("handle") or ch.get("display_name", "")
+                    print(f"           • {ch['platform']}: {handle}")
             elif "sample_models" in result.data:
                 print(f"           Sample models: {', '.join(result.data['sample_models'][:3])}")
             elif "connectors" in result.data:
@@ -581,15 +667,15 @@ async def run_all_checks() -> list[CheckResult]:
     results: list[CheckResult] = []
 
     # Anthropic
-    r = await check_anthropic()
-    results.append(r)
+    results.append(await check_anthropic())
 
     # Buffer auth (needed before channel discovery)
     r_auth = await check_buffer_auth()
     results.append(r_auth)
+    auth_data = r_auth.data if r_auth.status == PASS else {}
 
-    # Buffer channels
-    r_channels = await check_buffer_channels()
+    # Buffer channels (uses org IDs from auth)
+    r_channels = await check_buffer_channels(auth_data)
     results.append(r_channels)
     channels_data = r_channels.data if r_channels.status == PASS else {}
 
