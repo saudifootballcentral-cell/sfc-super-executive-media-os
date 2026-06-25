@@ -848,6 +848,12 @@ async def phase_iv_audit(report: GoLiveReport) -> PhaseResult:
 
 
 async def phase_v_activate(report: GoLiveReport) -> PhaseResult:
+    # Snapshot prior phases BEFORE appending Phase V so that the gate checks
+    # never see Phase V itself (which is not yet passed) as a prior failure.
+    # This is the fix for: "GATE_PRIOR_PHASES_INCOMPLETE: failed phases =
+    # ['Phase V — Controlled Production Activation']"
+    prior_phases = list(report.phases)
+
     phase = PhaseResult(name="Phase V — Controlled Production Activation")
     report.phases.append(phase)
     _banner("PHASE V: CONTROLLED PRODUCTION ACTIVATION")
@@ -856,31 +862,29 @@ async def phase_v_activate(report: GoLiveReport) -> PhaseResult:
     _print(f"  LIVE_PUBLISHING_ENABLED={_RAILWAY_LIVE_VALUE!r}")
     _print(f"  Source={_RAILWAY_LIVE_SOURCE}")
 
-    # Gate 1: All prior phases must have passed
-    if not report.all_phases_passed:
-        failed_names = [p.name for p in report.phases if not p.passed and not p.skipped]
+    # Gate 1: All prior phases (I–IV) must have passed — Phase V is excluded.
+    prior_failed = [p.name for p in prior_phases if not p.passed and not p.skipped]
+    if prior_failed:
         gate_msg = (
-            f"GATE_PRIOR_PHASES_INCOMPLETE: failed phases = {failed_names}. "
+            f"GATE_PRIOR_PHASES_INCOMPLETE: failed phases = {prior_failed}. "
             "All of Phases I–IV must pass before live publishing can be activated."
         )
         phase.fail(gate_msg)
         _fail(f"Phase V: BLOCKED — {gate_msg}")
-        phase.complete(passed=False)
         return phase
 
-    # Gate 2: Zero critical failures from prior phases
-    critical_total = report.critical_failure_count
-    if critical_total > 0:
+    # Gate 2: Zero critical failures from prior phases (I–IV only).
+    prior_critical = sum(len(p.critical_failures) for p in prior_phases)
+    if prior_critical > 0:
         gate_msg = (
-            f"GATE_CRITICAL_FAILURES_UNRESOLVED: {critical_total} critical failure(s) detected "
+            f"GATE_CRITICAL_FAILURES_UNRESOLVED: {prior_critical} critical failure(s) detected "
             "in prior phases. Resolve all critical failures before activating live mode."
         )
         phase.fail(gate_msg)
         _fail(f"Phase V: BLOCKED — {gate_msg}")
-        phase.complete(passed=False)
         return phase
 
-    # Gate 3: Railway environment must have LIVE_PUBLISHING_ENABLED=true
+    # Gate 3: Railway environment must have LIVE_PUBLISHING_ENABLED=true.
     # The script does NOT set this value — Railway must configure it externally.
     if not _RAILWAY_LIVE_IS_TRUE:
         gate_msg = (
@@ -891,12 +895,11 @@ async def phase_v_activate(report: GoLiveReport) -> PhaseResult:
         )
         phase.fail(gate_msg)
         _fail(f"Phase V: BLOCKED — {gate_msg}")
-        phase.complete(passed=False)
         return phase
 
-    # All gates clear — restore Railway-authorized live mode in the process env
+    # All gates clear — restore Railway-authorized live mode in the process env.
     _print("  All three gates cleared:")
-    _print("    ✓ GATE_PRIOR_PHASES_INCOMPLETE: N/A — all phases passed")
+    _print(f"    ✓ GATE_PRIOR_PHASES_INCOMPLETE: N/A — all {len(prior_phases)} prior phases passed")
     _print("    ✓ GATE_CRITICAL_FAILURES_UNRESOLVED: N/A — zero critical failures")
     _print(f"    ✓ GATE_RAILWAY_ENV_NOT_AUTHORIZED: N/A — Railway authorized ({_RAILWAY_LIVE_VALUE!r})")
     _print("  Restoring Railway-authorized LIVE_PUBLISHING_ENABLED=true in process env…")
