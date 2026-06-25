@@ -131,6 +131,11 @@ class ContentItem(BaseModel):
     model_config = {"use_enum_values": True}
 
     @property
+    def is_publishable(self) -> bool:
+        """Constitutional verification gate: minimum 2 independent sources required."""
+        return len(self.sources) >= 2
+
+    @property
     def passes_governance(self) -> bool:
         if self.status not in (ContentStatus.APPROVED,):
             return False
