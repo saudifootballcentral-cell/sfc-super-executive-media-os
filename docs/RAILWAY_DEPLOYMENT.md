@@ -14,6 +14,22 @@ Nixpacks is not used — the project requires `ffmpeg`/`ffprobe` system packages
 
 The `railway.toml` at the repo root configures the builder and start command automatically.
 
+## Production start command
+
+```
+python scripts/railway_worker.py
+```
+
+`scripts/railway_worker.py` is the production entrypoint. It:
+- Verifies `ffmpeg` and `ffprobe` availability (exits 1 on failure)
+- Verifies all `sfc` package imports
+- Instantiates `MasterOrchestrator` in dry-run mode by default
+- Logs startup success
+- Logs a heartbeat every 60 seconds to confirm the worker is alive
+- Never publishes unless `LIVE_PUBLISHING_ENABLED=true` is explicitly set
+
+`scripts/run_demo.py` is a development helper that runs a one-shot scenario and exits. Do not use it as the Railway start command.
+
 ---
 
 ## Environment variables

@@ -81,4 +81,4 @@ USER sfc
 HEALTHCHECK --interval=30s --timeout=15s --start-period=20s --retries=3 \
     CMD python scripts/healthcheck.py || exit 1
 
-CMD ["python", "scripts/run_demo.py", "--scenario", "transfer"]
+CMD ["python", "scripts/railway_worker.py"]
