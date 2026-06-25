@@ -64,6 +64,56 @@ def _check_live_publishing() -> bool:
     return live
 
 
+def _log_env_diagnostics() -> None:
+    """Log presence/state of key env vars without exposing secret values."""
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    buffer_token = os.environ.get("BUFFER_ACCESS_TOKEN", "")
+    live_flag = os.environ.get("LIVE_PUBLISHING_ENABLED", "false")
+
+    logger.info("--- Environment Diagnostics ---")
+    logger.info("  ANTHROPIC_API_KEY present: %s", bool(anthropic_key))
+    logger.info("  BUFFER_ACCESS_TOKEN present: %s", bool(buffer_token))
+    logger.info("  LIVE_PUBLISHING_ENABLED: %s", live_flag)
+
+    if buffer_token:
+        from sfc.connectors.buffer.graphql_client import BufferGraphQLClient
+        is_api_key = BufferGraphQLClient.is_api_key(buffer_token)
+        masked = buffer_token[:6] + "..." + buffer_token[-4:]
+        logger.info(
+            "  BUFFER token type: %s (masked: %s)",
+            "API Key (GraphQL)" if is_api_key else "OAuth token (REST)",
+            masked,
+        )
+    else:
+        logger.warning("  BUFFER token type: unknown — BUFFER_ACCESS_TOKEN not set")
+
+    logger.info("--- End Environment Diagnostics ---")
+
+
+async def _anthropic_health_check() -> None:
+    """Verify Anthropic API key is present; attempt a minimal connectivity check."""
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not key:
+        logger.warning("Anthropic health check: SKIPPED — ANTHROPIC_API_KEY not set")
+        return
+    try:
+        import httpx
+        # HEAD request to the Anthropic models endpoint — no tokens consumed, no generation
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                "https://api.anthropic.com/v1/models",
+                headers={"x-api-key": key, "anthropic-version": "2023-06-01"},
+            )
+        if resp.status_code == 200:
+            logger.info("Anthropic health check: OK (HTTP 200)")
+        elif resp.status_code == 401:
+            logger.error("Anthropic health check: FAILED — API key rejected (HTTP 401)")
+        else:
+            logger.warning("Anthropic health check: unexpected HTTP %d", resp.status_code)
+    except Exception as exc:
+        logger.warning("Anthropic health check: unreachable — %s", exc)
+
+
 async def _startup() -> None:
     from sfc.orchestration.master_orchestrator import MasterOrchestrator
 
@@ -71,7 +121,9 @@ async def _startup() -> None:
 
     _verify_system_binaries()
     _verify_imports()
+    _log_env_diagnostics()
     live = _check_live_publishing()
+    await _anthropic_health_check()
 
     orchestrator = MasterOrchestrator()
     logger.info("MasterOrchestrator instantiated — live_publishing=%s", live)
