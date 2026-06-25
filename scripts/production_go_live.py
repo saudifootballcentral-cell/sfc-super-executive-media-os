@@ -90,6 +90,26 @@ def _print_runtime_diagnostics() -> None:
 _print_runtime_diagnostics()
 
 # ---------------------------------------------------------------------------
+# Railway environment snapshot — captured BEFORE any code can override it.
+# This is the authoritative record of what Railway configured at container
+# startup. Phase V uses this (not the process-overridden value) as the
+# live-publishing authorization signal.
+# ---------------------------------------------------------------------------
+
+_RAILWAY_LIVE_VALUE: str = os.environ.get("LIVE_PUBLISHING_ENABLED", "")
+_RAILWAY_LIVE_IN_ENV: bool = "LIVE_PUBLISHING_ENABLED" in os.environ
+_RAILWAY_LIVE_IS_TRUE: bool = _RAILWAY_LIVE_VALUE.lower() == "true"
+_RAILWAY_LIVE_SOURCE: str = (
+    "Railway Environment" if _RAILWAY_LIVE_IN_ENV else "default (not set in Railway)"
+)
+
+print(
+    f"[SFC-GOLIVE] LIVE_PUBLISHING_ENABLED={_RAILWAY_LIVE_VALUE!r}  "
+    f"Source={_RAILWAY_LIVE_SOURCE}",
+    flush=True,
+)
+
+# ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
 
@@ -707,7 +727,7 @@ async def phase_iv_audit(report: GoLiveReport) -> PhaseResult:
     # 2. ContentItem publishability gate
     _print("  Auditing ContentItem.is_publishable gate…")
     try:
-        from sfc.core.models import ContentItem, Source
+        from sfc.core.models import ContentItem, Source  # type: ignore[import]
         # Single-source item must be blocked (constitutional: min 2 sources)
         test_single = ContentItem(
             title="Audit Test",
@@ -769,16 +789,24 @@ async def phase_iv_audit(report: GoLiveReport) -> PhaseResult:
 
     # 4. Environment variable audit
     _print("  Auditing environment variables…")
+    _print(f"  [Railway snapshot] LIVE_PUBLISHING_ENABLED={_RAILWAY_LIVE_VALUE!r}  Source={_RAILWAY_LIVE_SOURCE}")
     env_audit = {}
     critical_vars = {
         "ANTHROPIC_API_KEY": "required",
         "BUFFER_ACCESS_TOKEN": "required",
-        "LIVE_PUBLISHING_ENABLED": "must be false before Phase V",
+        "LIVE_PUBLISHING_ENABLED": "must be false during Phases I–IV; Railway value logged above",
     }
     for var, expectation in critical_vars.items():
         val = os.environ.get(var, "")
         if var == "LIVE_PUBLISHING_ENABLED":
-            status = "PASS" if val.lower() in ("false", "") else "FAIL"
+            # During Phases I–IV the process env is forced to "false" for safety.
+            # Report the Railway-original value so it's visible in audit output.
+            railway_val = _RAILWAY_LIVE_VALUE if var == "LIVE_PUBLISHING_ENABLED" else val
+            env_audit[var] = (
+                f"PASS (process=false enforced; Railway={railway_val!r} from {_RAILWAY_LIVE_SOURCE})"
+            )
+            _ok(f"  {var}: PASS — process=false (Railway original={railway_val!r}, source={_RAILWAY_LIVE_SOURCE})")
+            continue
         else:
             status = "PASS" if val else "WARN"
         env_audit[var] = f"{status} ({expectation})"
@@ -791,6 +819,8 @@ async def phase_iv_audit(report: GoLiveReport) -> PhaseResult:
             _fail(f"  {var}: FAIL")
 
     audit_items["env_vars"] = str(env_audit)
+    audit_items["railway_live_value"] = _RAILWAY_LIVE_VALUE
+    audit_items["railway_live_source"] = _RAILWAY_LIVE_SOURCE
 
     # 5. Safe repairs
     if repairs:
@@ -818,41 +848,73 @@ async def phase_iv_audit(report: GoLiveReport) -> PhaseResult:
 
 
 async def phase_v_activate(report: GoLiveReport) -> PhaseResult:
+    # Snapshot prior phases BEFORE appending Phase V so that the gate checks
+    # never see Phase V itself (which is not yet passed) as a prior failure.
+    # This is the fix for: "GATE_PRIOR_PHASES_INCOMPLETE: failed phases =
+    # ['Phase V — Controlled Production Activation']"
+    prior_phases = list(report.phases)
+
     phase = PhaseResult(name="Phase V — Controlled Production Activation")
     report.phases.append(phase)
     _banner("PHASE V: CONTROLLED PRODUCTION ACTIVATION")
 
-    if not report.all_phases_passed:
-        failed = [p.name for p in report.phases if not p.passed and not p.skipped]
-        msg = f"Phases not passed: {failed} — LIVE activation BLOCKED"
-        phase.fail(msg)
-        _fail(f"Phase V: BLOCKED — {msg}")
-        phase.complete(passed=False)
-        os.environ["LIVE_PUBLISHING_ENABLED"] = "false"
+    # Report the Railway-configured value before any gate check
+    _print(f"  LIVE_PUBLISHING_ENABLED={_RAILWAY_LIVE_VALUE!r}")
+    _print(f"  Source={_RAILWAY_LIVE_SOURCE}")
+
+    # Gate 1: All prior phases (I–IV) must have passed — Phase V is excluded.
+    prior_failed = [p.name for p in prior_phases if not p.passed and not p.skipped]
+    if prior_failed:
+        gate_msg = (
+            f"GATE_PRIOR_PHASES_INCOMPLETE: failed phases = {prior_failed}. "
+            "All of Phases I–IV must pass before live publishing can be activated."
+        )
+        phase.fail(gate_msg)
+        _fail(f"Phase V: BLOCKED — {gate_msg}")
         return phase
 
-    critical_total = report.critical_failure_count
-    if critical_total > 0:
-        phase.fail(f"{critical_total} unresolved critical failure(s) from prior phases")
-        _fail(f"Phase V: BLOCKED — {critical_total} critical failure(s) must be resolved first")
-        phase.complete(passed=False)
-        os.environ["LIVE_PUBLISHING_ENABLED"] = "false"
+    # Gate 2: Zero critical failures from prior phases (I–IV only).
+    prior_critical = sum(len(p.critical_failures) for p in prior_phases)
+    if prior_critical > 0:
+        gate_msg = (
+            f"GATE_CRITICAL_FAILURES_UNRESOLVED: {prior_critical} critical failure(s) detected "
+            "in prior phases. Resolve all critical failures before activating live mode."
+        )
+        phase.fail(gate_msg)
+        _fail(f"Phase V: BLOCKED — {gate_msg}")
         return phase
 
-    # All gates clear — activate live mode
-    _print("  All prior phases passed with zero critical failures.")
-    _print("  Activating LIVE_PUBLISHING_ENABLED=true…")
+    # Gate 3: Railway environment must have LIVE_PUBLISHING_ENABLED=true.
+    # The script does NOT set this value — Railway must configure it externally.
+    if not _RAILWAY_LIVE_IS_TRUE:
+        gate_msg = (
+            f"GATE_RAILWAY_ENV_NOT_AUTHORIZED: Railway has LIVE_PUBLISHING_ENABLED="
+            f"{_RAILWAY_LIVE_VALUE!r} (source: {_RAILWAY_LIVE_SOURCE}). "
+            "To authorize live publishing, set LIVE_PUBLISHING_ENABLED=true in the "
+            "Railway service variables dashboard, then re-deploy."
+        )
+        phase.fail(gate_msg)
+        _fail(f"Phase V: BLOCKED — {gate_msg}")
+        return phase
+
+    # All gates clear — restore Railway-authorized live mode in the process env.
+    _print("  All three gates cleared:")
+    _print(f"    ✓ GATE_PRIOR_PHASES_INCOMPLETE: N/A — all {len(prior_phases)} prior phases passed")
+    _print("    ✓ GATE_CRITICAL_FAILURES_UNRESOLVED: N/A — zero critical failures")
+    _print(f"    ✓ GATE_RAILWAY_ENV_NOT_AUTHORIZED: N/A — Railway authorized ({_RAILWAY_LIVE_VALUE!r})")
+    _print("  Restoring Railway-authorized LIVE_PUBLISHING_ENABLED=true in process env…")
     os.environ["LIVE_PUBLISHING_ENABLED"] = "true"
 
-    # Verify activation took effect
     live_confirmed = os.environ.get("LIVE_PUBLISHING_ENABLED", "false").lower() == "true"
     if live_confirmed:
         phase.details["live_activated_at"] = datetime.utcnow().isoformat()
+        phase.details["railway_authorized_value"] = _RAILWAY_LIVE_VALUE
+        phase.details["railway_source"] = _RAILWAY_LIVE_SOURCE
         phase.complete(passed=True)
-        _ok("Phase V: PASS — LIVE_PUBLISHING_ENABLED=true activated")
+        _ok("Phase V: PASS — live publishing authorized by Railway environment and activated")
     else:
-        phase.fail("LIVE_PUBLISHING_ENABLED activation failed — env var not set correctly")
-        _fail("Phase V: FAIL — activation error")
+        phase.fail("Process env restoration failed — LIVE_PUBLISHING_ENABLED not set correctly")
+        _fail("Phase V: FAIL — internal activation error")
 
     return phase
 
@@ -1126,10 +1188,12 @@ async def main() -> int:
     print("=" * 72)
     print(f"  Initiated: {datetime.utcnow().isoformat()} UTC")
     print("  Mode: FULLY AUTONOMOUS — six-phase execution")
-    print("  Constraint: LIVE_PUBLISHING_ENABLED=false until Phase V gate clears")
+    print("  Constraint: LIVE_PUBLISHING_ENABLED=false enforced during Phases I–IV")
+    print(f"  Railway LIVE_PUBLISHING_ENABLED={_RAILWAY_LIVE_VALUE!r}  Source={_RAILWAY_LIVE_SOURCE}")
     print("=" * 72)
 
-    # Ensure we start in safe state
+    # Phases I–IV run in safe mode. The Railway-original value is captured in
+    # _RAILWAY_LIVE_VALUE above; Phase V reads that snapshot — not this override.
     os.environ["LIVE_PUBLISHING_ENABLED"] = "false"
 
     report = GoLiveReport()
