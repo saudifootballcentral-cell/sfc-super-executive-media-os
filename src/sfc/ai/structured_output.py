@@ -75,34 +75,143 @@ _SCHEMA_REGISTRY: dict[str, type[BaseModel]] = {
 # Utility functions
 # ---------------------------------------------------------------------------
 
-def extract_json(text: str) -> dict[str, Any]:
-    """Extract JSON from AI response, stripping markdown fences."""
-    if not text:
-        return {}
+def repair_json(text: str) -> str | None:
+    """Attempt heuristic repair of common LLM JSON issues.
 
-    # Try to strip markdown code fences
-    # Match ```json ... ``` or ``` ... ```
-    fence_pattern = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
-    match = fence_pattern.search(text)
-    if match:
-        candidate = match.group(1).strip()
+    Handles: trailing commas, unterminated strings, unclosed braces/brackets.
+    Returns the repaired JSON string, or None if unrepairable.
+    """
+    s = text.strip()
+    if not s:
+        return None
+
+    # Remove trailing commas: before } or ], and at end of string (truncated response)
+    s = re.sub(r",\s*([}\]])", r"\1", s)
+    s = re.sub(r",\s*$", "", s)
+    s = re.sub(r",\s*([}\]])", r"\1", s)  # second pass for nested cases
+
+    # Walk to find structural state (respects escapes and quoted strings)
+    in_str = False
+    escape_next = False
+    depth_brace = 0
+    depth_bracket = 0
+    last_complete_pos = 0
+
+    for idx, ch in enumerate(s):
+        if escape_next:
+            escape_next = False
+            continue
+        if ch == "\\" and in_str:
+            escape_next = True
+            continue
+        if ch == '"':
+            in_str = not in_str
+            continue
+        if in_str:
+            continue
+        if ch == "{":
+            depth_brace += 1
+        elif ch == "}":
+            depth_brace -= 1
+            if depth_brace == 0 and depth_bracket == 0:
+                last_complete_pos = idx + 1
+        elif ch == "[":
+            depth_bracket += 1
+        elif ch == "]":
+            depth_bracket -= 1
+            if depth_brace == 0 and depth_bracket == 0:
+                last_complete_pos = idx + 1
+
+    # Already valid
+    if not in_str and depth_brace == 0 and depth_bracket == 0:
         try:
-            return json.loads(candidate)
+            json.loads(s)
+            return s
         except json.JSONDecodeError:
             pass
 
-    # Try the raw text
+    # Close unterminated string then open structures
+    suffix = ('"' if in_str else "") + "]" * max(0, depth_bracket) + "}" * max(0, depth_brace)
+    repaired = s + suffix
+    try:
+        json.loads(repaired)
+        return repaired
+    except json.JSONDecodeError:
+        pass
+
+    # Last resort: truncate to last known balanced position
+    if last_complete_pos > 0:
+        truncated = s[:last_complete_pos]
+        try:
+            json.loads(truncated)
+            return truncated
+        except json.JSONDecodeError:
+            pass
+
+    return None
+
+
+def _strip_fences(text: str) -> list[str]:
+    """Return candidate strings with markdown fences stripped (multiple strategies)."""
+    candidates: list[str] = []
+
+    # Strategy 1: complete ```json ... ``` or ``` ... ``` fences
+    fence_pattern = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
+    for m in fence_pattern.finditer(text):
+        candidates.append(m.group(1).strip())
+
+    # Strategy 2: unclosed fence — content after the opening ```
+    unclosed = re.search(r"```(?:json)?\s*([\s\S]+)$", text, re.IGNORECASE)
+    if unclosed:
+        candidates.append(unclosed.group(1).strip())
+
+    return candidates
+
+
+def extract_json(text: str) -> dict[str, Any]:
+    """Extract JSON from AI response, with repair for common LLM syntax errors."""
+    if not text:
+        return {}
+
     text_stripped = text.strip()
+
+    # 1. Try fence-stripped candidates first
+    for candidate in _strip_fences(text_stripped):
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            repaired = repair_json(candidate)
+            if repaired:
+                try:
+                    return json.loads(repaired)
+                except json.JSONDecodeError:
+                    pass
+
+    # 2. Try raw text
     try:
         return json.loads(text_stripped)
     except json.JSONDecodeError:
         pass
 
-    # Try to find the first {...} block
+    # 3. Find the outermost {...} block
     brace_match = re.search(r"\{[\s\S]*\}", text_stripped)
     if brace_match:
+        block = brace_match.group(0)
         try:
-            return json.loads(brace_match.group(0))
+            return json.loads(block)
+        except json.JSONDecodeError:
+            repaired = repair_json(block)
+            if repaired:
+                try:
+                    return json.loads(repaired)
+                except json.JSONDecodeError:
+                    pass
+
+    # 4. Attempt repair on the full stripped text
+    repaired = repair_json(text_stripped)
+    if repaired:
+        try:
+            return json.loads(repaired)
         except json.JSONDecodeError:
             pass
 

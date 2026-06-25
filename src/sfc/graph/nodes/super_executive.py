@@ -15,6 +15,7 @@ import os
 from datetime import datetime
 from typing import Any
 
+from sfc.ai.structured_output import extract_json
 from sfc.core.constitution import load_constitution
 from sfc.core.models import Division, ExecutiveDecision, Priority, RiskLevel
 from sfc.graph.state import SFCState
@@ -110,16 +111,10 @@ async def _call_via_gateway(state: SFCState) -> dict[str, Any] | None:
             if response.parsed:
                 logger.info("[SuperExecutive] Gateway decision received (parsed)")
                 return response.parsed
-            # Try to parse from text
-            import re
-            raw = response.text.strip()
-            if raw.startswith("```"):
-                raw = raw.split("```")[1]
-                if raw.startswith("json"):
-                    raw = raw[4:]
-            decision = json.loads(raw.strip())
-            logger.info("[SuperExecutive] Gateway decision received (text)")
-            return decision
+            decision = extract_json(response.text)
+            if decision:
+                logger.info("[SuperExecutive] Gateway decision received (text)")
+                return decision
 
     except Exception as exc:
         logger.warning("[SuperExecutive] Gateway call failed: %s", exc)
@@ -166,16 +161,12 @@ async def _call_claude(state: SFCState, api_key: str) -> dict[str, Any]:
         )
 
         raw = message.content[0].text.strip()
-
-        # Strip markdown fences if present
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-
-        decision = json.loads(raw)
-        logger.info("[SuperExecutive] Claude decision received")
-        return decision
+        decision = extract_json(raw)
+        if decision:
+            logger.info("[SuperExecutive] Claude decision received")
+            return decision
+        logger.warning("[SuperExecutive] Could not parse JSON from Claude response")
+        return None
 
     except Exception as exc:
         logger.error("[SuperExecutive] Claude call failed: %s — falling back", exc)

@@ -206,16 +206,10 @@ class ClaudeClient:
 
     @staticmethod
     def _parse_json(text: str) -> Any:
-        # Strip markdown fences if present
-        if "```" in text:
-            parts = text.split("```")
-            for part in parts:
-                stripped = part.lstrip("json").strip()
-                if stripped.startswith(("{", "[")):
-                    text = stripped
-                    break
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError as exc:
-            logger.warning("[Claude] JSON parse failed: %s", exc)
-            return {"raw": text, "_parse_error": str(exc)}
+        from sfc.ai.structured_output import extract_json
+        result = extract_json(text)
+        if result:
+            return result
+        # Fallback: return raw text with error marker so callers can detect failure
+        logger.warning("[Claude] JSON parse failed — no valid JSON found in response")
+        return {"raw": text, "_parse_error": "no valid JSON found"}

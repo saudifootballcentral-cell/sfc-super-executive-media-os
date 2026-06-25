@@ -58,11 +58,15 @@ ENV LIVE_PUBLISHING_ENABLED=false
 ENV GENERATE_REAL_ASSETS=false
 ENV VIDEO_PROCESSING_ENABLED=false
 
+# Repo root so constitution.py and prompt_loader.py resolve files correctly
+ENV SFC_REPO_ROOT=/app
+
 WORKDIR /app
 
 # Copy source
 COPY src/ ./src/
 COPY constitution/ ./constitution/
+COPY prompts/ ./prompts/
 COPY config/ ./config/
 COPY scripts/ ./scripts/
 COPY pyproject.toml .
