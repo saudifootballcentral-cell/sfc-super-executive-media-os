@@ -64,6 +64,114 @@ def _check_live_publishing() -> bool:
     return live
 
 
+def _log_import_diagnostics() -> None:
+    """Print definitive runtime import proof to stdout (appears in Railway logs).
+
+    This runs before any SFC business logic.  It answers the question:
+    'Which code is Railway actually executing right now?'
+    """
+    import inspect
+    import subprocess
+
+    print("=" * 70, flush=True)
+    print("SFC RUNTIME IMPORT DIAGNOSTICS", flush=True)
+    print("=" * 70, flush=True)
+
+    # --- Runtime environment ---
+    print(f"  Python executable : {sys.executable}", flush=True)
+    print(f"  Python version    : {sys.version}", flush=True)
+    print(f"  cwd               : {os.getcwd()}", flush=True)
+    print(f"  PYTHONPATH        : {os.environ.get('PYTHONPATH', '(not set)')}", flush=True)
+    print(f"  SFC_REPO_ROOT     : {os.environ.get('SFC_REPO_ROOT', '(not set)')}", flush=True)
+    print(f"  sys.path          : {sys.path}", flush=True)
+
+    try:
+        sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL).strip()
+        print(f"  git HEAD SHA      : {sha}", flush=True)
+    except Exception:
+        print("  git HEAD SHA      : unavailable", flush=True)
+
+    print("", flush=True)
+
+    # --- Import resolution ---
+    try:
+        import sfc
+        print(f"  sfc.__file__               : {getattr(sfc, '__file__', None)}", flush=True)
+        print(f"  sfc.__version__            : {getattr(sfc, '__version__', 'unknown')}", flush=True)
+    except Exception as exc:
+        print(f"  sfc import FAILED          : {exc}", flush=True)
+
+    try:
+        from sfc.ai.providers import claude as _claude_mod
+        print(f"  claude.__file__            : {getattr(_claude_mod, '__file__', None)}", flush=True)
+        has_sanitize = hasattr(_claude_mod, "_sanitize_payload")
+        has_permanent = hasattr(_claude_mod, "_is_permanent_error")
+        print(f"  _sanitize_payload exists   : {has_sanitize}", flush=True)
+        print(f"  _is_permanent_error exists : {has_permanent}", flush=True)
+        if has_sanitize:
+            src_file = inspect.getsourcefile(_claude_mod._sanitize_payload)
+            print(f"  _sanitize_payload source   : {src_file}", flush=True)
+        else:
+            print("  _sanitize_payload source   : MISSING — old code is running!", flush=True)
+    except Exception as exc:
+        print(f"  claude module FAILED       : {exc}", flush=True)
+
+    try:
+        from sfc.graph.nodes import super_executive as _se_mod
+        print(f"  super_executive.__file__   : {getattr(_se_mod, '__file__', None)}", flush=True)
+    except Exception as exc:
+        print(f"  super_executive FAILED     : {exc}", flush=True)
+
+    try:
+        from sfc.tools import claude_client as _cc_mod
+        print(f"  claude_client.__file__     : {getattr(_cc_mod, '__file__', None)}", flush=True)
+    except Exception as exc:
+        print(f"  claude_client FAILED       : {exc}", flush=True)
+
+    print("", flush=True)
+
+    # --- ExecutiveDecisionAI schema ---
+    try:
+        from sfc.ai.structured_output import ExecutiveDecisionAI
+        fields = list(ExecutiveDecisionAI.model_fields.keys())
+        required = [n for n, f in ExecutiveDecisionAI.model_fields.items() if f.is_required()]
+        print(f"  ExecutiveDecisionAI.__module__    : {ExecutiveDecisionAI.__module__}", flush=True)
+        print(f"  ExecutiveDecisionAI fields        : {fields}", flush=True)
+        print(f"  ExecutiveDecisionAI required (=0) : {required}", flush=True)
+        if required:
+            print(f"  WARNING: {len(required)} required fields — validation will fail on partial responses!", flush=True)
+    except Exception as exc:
+        print(f"  ExecutiveDecisionAI FAILED        : {exc}", flush=True)
+
+    print("", flush=True)
+
+    # --- BreakingNewsCommandCenter ---
+    try:
+        from sfc.war_rooms.operations.breaking_news.service import BreakingNewsCommandCenter
+        has_init = hasattr(BreakingNewsCommandCenter, "initialize")
+        print(f"  BreakingNewsCommandCenter.initialize : {has_init}", flush=True)
+        if not has_init:
+            print("  WARNING: initialize() missing — war_room_router will raise AttributeError!", flush=True)
+    except Exception as exc:
+        print(f"  BreakingNewsCommandCenter FAILED     : {exc}", flush=True)
+
+    # --- Prompt resolution ---
+    try:
+        from sfc.ai.prompt_loader import _find_repo_root
+        repo_root = _find_repo_root()
+        strategic_path = repo_root / "prompts" / "divisions" / "strategic_planning.md"
+        print(f"  PromptLoader repo_root             : {repo_root}", flush=True)
+        print(f"  strategic_planning.md exists       : {strategic_path.exists()}", flush=True)
+        if not strategic_path.exists():
+            print(f"  WARNING: prompt file missing at {strategic_path}", flush=True)
+    except Exception as exc:
+        print(f"  PromptLoader FAILED                : {exc}", flush=True)
+
+    print("=" * 70, flush=True)
+    print("END RUNTIME IMPORT DIAGNOSTICS", flush=True)
+    print("=" * 70, flush=True)
+
+
 def _log_env_diagnostics() -> None:
     """Log presence/state of key env vars without exposing secret values."""
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -119,6 +227,7 @@ async def _startup() -> None:
 
     logger.info("=== SFC Super Executive Media OS — Railway Worker Starting ===")
 
+    _log_import_diagnostics()
     _verify_system_binaries()
     _verify_imports()
     _log_env_diagnostics()

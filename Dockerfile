@@ -77,6 +77,18 @@ COPY config/ ./config/
 COPY scripts/ ./scripts/
 COPY pyproject.toml .
 
+# DEFINITIVE FIX: re-install the sfc package from the freshly-copied /app/src/.
+#
+# Problem: the builder stage installs sfc into /opt/venv/lib/site-packages/.
+# Docker may cache that builder stage from a previous commit, so site-packages
+# could contain old code (without _sanitize_payload, without ExecutiveDecisionAI
+# defaults, etc.).  ENV PYTHONPATH=/app/src above is one guard; this RUN is the
+# second, independent guard: it overwrites site-packages with the current source.
+#
+# The COPY src/ layer above has a different hash on every git push, so Docker
+# CANNOT cache this RUN — it always re-installs from the latest committed code.
+RUN pip install --no-cache-dir .
+
 # Create runtime artifact directories owned by non-root user
 RUN mkdir -p \
     artifacts/creative \

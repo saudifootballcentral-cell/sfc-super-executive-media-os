@@ -11,12 +11,36 @@ logger = logging.getLogger("sfc.ai.prompt_loader")
 
 
 def _find_repo_root() -> Path:
-    """Locate repo root via env var or heuristic from this file's location."""
+    """Locate repo root by env var, then by searching upward for prompts/.
+
+    Strategy (tried in order):
+    1. SFC_REPO_ROOT env var — always correct in Docker / Railway.
+    2. Walk upward from __file__ looking for a dir that contains prompts/.
+       Works from /app/src/sfc/ai/ AND from a venv site-packages path.
+    3. Walk upward from CWD for the same sentinel.
+    4. parents[3] — last resort, only correct from src/ layout.
+    """
     env_root = os.environ.get("SFC_REPO_ROOT", "")
     if env_root:
-        return Path(env_root)
-    # This file lives at src/sfc/ai/prompt_loader.py
-    # Parents: [ai/, sfc/, src/, repo_root]
+        candidate = Path(env_root)
+        if candidate.is_dir():
+            return candidate
+
+    for ancestor in Path(__file__).parents:
+        if (ancestor / "prompts").is_dir():
+            return ancestor
+
+    cwd = Path(os.getcwd())
+    if (cwd / "prompts").is_dir():
+        return cwd
+    for ancestor in cwd.parents:
+        if (ancestor / "prompts").is_dir():
+            return ancestor
+
+    logger.warning(
+        "[PromptLoader] Could not locate repo root via prompts/ sentinel — "
+        "falling back to parents[3]. Set SFC_REPO_ROOT if prompts are missing."
+    )
     return Path(__file__).parents[3]
 
 
