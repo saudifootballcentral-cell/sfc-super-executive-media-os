@@ -31,6 +31,12 @@ logger = logging.getLogger("sfc.railway_worker")
 
 HEARTBEAT_INTERVAL = 60  # seconds
 
+# Module-level proof — prints even if every subsequent import fails.
+# This is the first thing that appears in Railway logs when the correct
+# image is running; its absence means Railway built from a stale/wrong source.
+print(f"[SFC-BOOT] railway_worker.py executing — file={__file__}", flush=True)
+print(f"[SFC-BOOT] Python={sys.executable}  PYTHONPATH={os.environ.get('PYTHONPATH', '(not set)')}", flush=True)
+
 
 def _verify_system_binaries() -> None:
     missing = [b for b in ("ffmpeg", "ffprobe") if not shutil.which(b)]
@@ -223,17 +229,16 @@ async def _anthropic_health_check() -> None:
 
 
 async def _startup() -> None:
-    from sfc.orchestration.master_orchestrator import MasterOrchestrator
-
     logger.info("=== SFC Super Executive Media OS — Railway Worker Starting ===")
 
-    _log_import_diagnostics()
     _verify_system_binaries()
     _verify_imports()
     _log_env_diagnostics()
     live = _check_live_publishing()
     await _anthropic_health_check()
 
+    # Import only after _verify_imports() has confirmed the package is present.
+    from sfc.orchestration.master_orchestrator import MasterOrchestrator
     orchestrator = MasterOrchestrator()
     logger.info("MasterOrchestrator instantiated — live_publishing=%s", live)
     logger.info("=== Startup complete — worker is running ===")
@@ -252,6 +257,9 @@ async def _heartbeat_loop(orchestrator: object) -> None:  # type: ignore[type-ar
 
 
 async def main() -> None:
+    # Diagnostics run before any SFC business logic — guaranteed to appear in
+    # Railway logs regardless of whether downstream imports succeed or fail.
+    _log_import_diagnostics()
     orchestrator = await _startup()
     await _heartbeat_loop(orchestrator)
 
