@@ -4,7 +4,7 @@ Buffer API Keys authenticate against the GraphQL endpoint, not the legacy REST A
 REST API (api.bufferapp.com/1) only accepts OAuth tokens; it rejects API Keys with
 "Public API tokens are not accepted for REST API access".
 
-Endpoint : https://api.buffer.com   (NOT api.bufferapp.com)
+Endpoint : https://api.buffer.com
 Auth     : Authorization: Bearer <BUFFER_ACCESS_TOKEN>
 Dry-run  : when LIVE_PUBLISHING_ENABLED=false, no network calls are made.
 

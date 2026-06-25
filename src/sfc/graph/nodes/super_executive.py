@@ -15,6 +15,7 @@ import os
 from datetime import datetime
 from typing import Any
 
+from sfc.ai.structured_output import extract_json
 from sfc.core.constitution import load_constitution
 from sfc.core.models import Division, ExecutiveDecision, Priority, RiskLevel
 from sfc.graph.state import SFCState
@@ -95,7 +96,19 @@ async def _call_via_gateway(state: SFCState) -> dict[str, Any] | None:
             user_message=(
                 f"Analyze this incoming task and return your executive decision as JSON:\n\n"
                 f"{task_brief}\n\n"
-                "Return ONLY valid JSON matching the schema in your instructions."
+                "Return ONLY a valid JSON object with EXACTLY these fields "
+                "(no extra keys, no markdown, no explanation):\n"
+                "{\n"
+                '  "task_analysis": "<string: your analysis of this task>",\n'
+                '  "priority": "<critical|high|medium|low>",\n'
+                '  "risk_level": "<critical|high|medium|low>",\n'
+                '  "recommended_divisions": ["intelligence", "editorial", ...],\n'
+                '  "content_strategy": "<string: content approach>",\n'
+                '  "routing": "planning",\n'
+                '  "rationale": "<string: your reasoning>",\n'
+                '  "estimated_reach": <integer>,\n'
+                '  "revenue_opportunity": <true|false>\n'
+                "}"
             ),
             max_tokens=1024,
             temperature=0.3,
@@ -110,16 +123,10 @@ async def _call_via_gateway(state: SFCState) -> dict[str, Any] | None:
             if response.parsed:
                 logger.info("[SuperExecutive] Gateway decision received (parsed)")
                 return response.parsed
-            # Try to parse from text
-            import re
-            raw = response.text.strip()
-            if raw.startswith("```"):
-                raw = raw.split("```")[1]
-                if raw.startswith("json"):
-                    raw = raw[4:]
-            decision = json.loads(raw.strip())
-            logger.info("[SuperExecutive] Gateway decision received (text)")
-            return decision
+            decision = extract_json(response.text)
+            if decision:
+                logger.info("[SuperExecutive] Gateway decision received (text)")
+                return decision
 
     except Exception as exc:
         logger.warning("[SuperExecutive] Gateway call failed: %s", exc)
@@ -149,33 +156,49 @@ async def _call_claude(state: SFCState, api_key: str) -> dict[str, Any]:
     )
 
     try:
-        message = await client.messages.create(
-            model="claude-opus-4-8",
-            max_tokens=1024,
-            system=system_prompt,
-            messages=[
+        from sfc.ai.providers.claude import _sanitize_payload
+        _model = "claude-opus-4-8"
+        _create_kwargs: dict = {
+            "model": _model,
+            "max_tokens": 1024,
+            "system": system_prompt,
+            "messages": [
                 {
                     "role": "user",
                     "content": (
                         f"Analyze this incoming task and return your executive decision as JSON:\n\n"
                         f"{task_brief}\n\n"
-                        "Return ONLY valid JSON matching the schema in your instructions."
+                        "Return ONLY a valid JSON object with EXACTLY these fields "
+                        "(no extra keys, no markdown, no explanation):\n"
+                        "{\n"
+                        '  "task_analysis": "<string: your analysis>",\n'
+                        '  "priority": "<critical|high|medium|low>",\n'
+                        '  "risk_level": "<critical|high|medium|low>",\n'
+                        '  "recommended_divisions": ["intelligence", "editorial", ...],\n'
+                        '  "content_strategy": "<string: content approach>",\n'
+                        '  "routing": "planning",\n'
+                        '  "rationale": "<string: your reasoning>",\n'
+                        '  "estimated_reach": <integer>,\n'
+                        '  "revenue_opportunity": <true|false>\n'
+                        "}"
                     ),
                 }
             ],
+        }
+        _sanitize_payload(_model, _create_kwargs)
+        logger.info(
+            "[SuperExecutive] Direct Claude request: model=%s keys=%s",
+            _model, sorted(_create_kwargs.keys()),
         )
+        message = await client.messages.create(**_create_kwargs)
 
         raw = message.content[0].text.strip()
-
-        # Strip markdown fences if present
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-
-        decision = json.loads(raw)
-        logger.info("[SuperExecutive] Claude decision received")
-        return decision
+        decision = extract_json(raw)
+        if decision:
+            logger.info("[SuperExecutive] Claude decision received")
+            return decision
+        logger.warning("[SuperExecutive] Could not parse JSON from Claude response")
+        return None
 
     except Exception as exc:
         logger.error("[SuperExecutive] Claude call failed: %s — falling back", exc)

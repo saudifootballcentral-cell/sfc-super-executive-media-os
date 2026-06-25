@@ -38,11 +38,15 @@ ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
+# Repo root so constitution.py and prompt_loader.py resolve files correctly
+ENV SFC_REPO_ROOT=/app
+
 WORKDIR /app
 
 # Copy source
 COPY src/ ./src/
 COPY constitution/ ./constitution/
+COPY prompts/ ./prompts/
 COPY config/ ./config/
 COPY scripts/ ./scripts/
 COPY pyproject.toml .

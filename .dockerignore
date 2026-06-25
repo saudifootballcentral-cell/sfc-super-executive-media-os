@@ -1,0 +1,20 @@
+# Exclude build artifacts and dev tooling from the Docker build context.
+# Prevents stale build/ packages from entering the image and speeds up COPY layers.
+
+build/
+dist/
+*.egg-info/
+.git/
+.gitignore
+.gitattributes
+tests/
+*.pyc
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.env
+.env.*
+*.log
+node_modules/
+.DS_Store

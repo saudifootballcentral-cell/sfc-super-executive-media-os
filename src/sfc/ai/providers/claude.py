@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import time
 from typing import Any
 
@@ -15,6 +16,61 @@ logger = logging.getLogger("sfc.ai.providers.claude")
 
 _DEFAULT_TIMEOUT = 30
 _DEFAULT_MAX_RETRIES = 3
+
+# All Claude 4.x models (e.g. claude-opus-4-8, claude-sonnet-4-6, claude-haiku-4-5-*)
+# and the Claude 5 family (Fable 5, Mythos 5) reject temperature/top_p/top_k (HTTP 400).
+_CLAUDE_4X_RE = re.compile(r"^claude-[a-z]+-4[-.]")
+_NO_SAMPLING_PARAMS_PREFIXES = (
+    "claude-fable-5",
+    "claude-mythos-5",
+    "claude-opus-4",
+    "claude-sonnet-4",
+    "claude-haiku-4",
+)
+
+# Error substrings that indicate a permanent, non-retriable failure.
+_PERMANENT_ERROR_PATTERNS = (
+    "temperature is deprecated",
+    "top_p is deprecated",
+    "top_k is deprecated",
+    "invalid_request_error",
+    "not supported for this model",
+    "deprecated for this model",
+)
+
+# Sampling params rejected by ALL Claude 4.x and 5.x models.
+_REJECTED_SAMPLING_PARAMS = frozenset({"temperature", "top_p", "top_k"})
+
+
+def _supports_temperature(model: str) -> bool:
+    """Return True only for pre-4.x Claude models that still accept temperature."""
+    if _CLAUDE_4X_RE.match(model):
+        return False
+    if any(model.startswith(prefix) for prefix in _NO_SAMPLING_PARAMS_PREFIXES):
+        return False
+    return True
+
+
+def _sanitize_payload(model: str, kwargs: dict) -> dict:
+    """Strip sampling params rejected by Claude 4.x/5.x models.
+
+    Called unconditionally as the final guard immediately before every
+    messages.create() call.  Removes temperature, top_p, top_k in-place
+    for any model that does not support them.  Returns the same dict.
+    """
+    if not _supports_temperature(model):
+        for param in _REJECTED_SAMPLING_PARAMS:
+            kwargs.pop(param, None)
+    return kwargs
+
+
+def _is_permanent_error(exc: Exception) -> bool:
+    """Return True for errors that must not be retried (4xx, deprecated params)."""
+    status = getattr(exc, "status_code", None)
+    if status in (400, 401, 403):
+        return True
+    msg = str(exc).lower()
+    return any(pat in msg for pat in _PERMANENT_ERROR_PATTERNS)
 
 
 class ClaudeProvider(AIProvider):
@@ -64,14 +120,26 @@ class ClaudeProvider(AIProvider):
         for attempt in range(max_retries):
             try:
                 start_ms = time.monotonic()
+                create_kwargs: dict[str, Any] = {
+                    "model": model,
+                    "max_tokens": request.max_tokens,
+                    "system": request.system_prompt,
+                    "messages": [{"role": "user", "content": user_message}],
+                }
+                if _supports_temperature(model):
+                    create_kwargs["temperature"] = request.temperature
+
+                # Unconditional final guard — removes temperature/top_p/top_k for any
+                # Claude 4.x/5.x model even if the check above somehow passed them in.
+                _sanitize_payload(model, create_kwargs)
+
+                logger.info(
+                    "[Claude] request model=%s keys=%s",
+                    model, sorted(create_kwargs.keys()),
+                )
+
                 message = await asyncio.wait_for(
-                    client.messages.create(
-                        model=model,
-                        max_tokens=request.max_tokens,
-                        temperature=request.temperature,
-                        system=request.system_prompt,
-                        messages=[{"role": "user", "content": user_message}],
-                    ),
+                    client.messages.create(**create_kwargs),
                     timeout=timeout,
                 )
                 latency_ms = int((time.monotonic() - start_ms) * 1000)
@@ -115,6 +183,18 @@ class ClaudeProvider(AIProvider):
                     )
 
             except Exception as exc:
+                # Permanent errors (deprecated params, invalid request, auth) must not be retried.
+                if _is_permanent_error(exc):
+                    logger.error(
+                        "[Claude] Permanent error for %s (not retrying): %s",
+                        model, exc,
+                    )
+                    return ModelResponse(
+                        success=False,
+                        error=str(exc),
+                        provider="claude",
+                        model=model,
+                    )
                 wait = 2 ** attempt
                 logger.warning(
                     "[Claude] Attempt %d/%d failed: %s — retrying in %ds",

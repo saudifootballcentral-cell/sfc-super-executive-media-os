@@ -70,9 +70,23 @@ class TestStructuredOutput:
         assert instance.routing == "planning"
         assert instance.revenue_opportunity is True
 
-    def test_validate_executive_decision_invalid_returns_none(self):
-        """Validate with missing required fields returns None + error."""
-        text = '{"priority": "high"}'  # Missing required fields
+    def test_validate_executive_decision_partial_response_uses_defaults(self):
+        """Partial Claude response validates successfully — missing fields use defaults.
+
+        Background: ExecutiveDecisionAI fields all have defaults so a response
+        that omits some fields (e.g. sonnet fallback with different field names)
+        still produces a valid instance with routing='planning' default.
+        """
+        text = '{"priority": "high"}'
+        instance, error = validate_output(text, ExecutiveDecisionAI)
+        assert instance is not None, "Partial response should validate with field defaults"
+        assert error is None
+        assert instance.priority == "high"
+        assert instance.routing == "planning"   # default
+
+    def test_validate_executive_decision_invalid_non_json_returns_none(self):
+        """Non-JSON text still returns None + error (not recoverable)."""
+        text = "This is plain text with no JSON at all."
         instance, error = validate_output(text, ExecutiveDecisionAI)
         assert instance is None
         assert error is not None
@@ -106,13 +120,18 @@ class TestStructuredOutput:
         assert error is None
         assert instance.title == "Al Hilal Clinches Title"
 
-    def test_validate_rejects_wrong_schema(self):
-        """Validate returns None when data doesn't match schema."""
-        # This is valid JSON but missing required fields for ExecutiveDecisionAI
+    def test_validate_extra_fields_ignored_defaults_fill_in(self):
+        """Valid JSON with unrecognised fields still validates — defaults fill required fields.
+
+        Pydantic ignores extra fields by default; all ExecutiveDecisionAI fields
+        have defaults, so any JSON object (however wrong its keys) produces a
+        valid instance with all defaults intact.
+        """
         text = '{"title": "some title", "body": "some body"}'
         instance, error = validate_output(text, ExecutiveDecisionAI)
-        assert instance is None
-        assert error is not None
+        assert instance is not None
+        assert error is None
+        assert instance.routing == "planning"   # default applied
 
     def test_validate_creative_brief_valid(self):
         """Validate a valid CreativeBriefAI JSON."""

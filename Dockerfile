@@ -58,14 +58,36 @@ ENV LIVE_PUBLISHING_ENABLED=false
 ENV GENERATE_REAL_ASSETS=false
 ENV VIDEO_PROCESSING_ENABLED=false
 
+# Repo root so constitution.py and prompt_loader.py resolve files correctly
+ENV SFC_REPO_ROOT=/app
+
+# CRITICAL: ensure Python imports from the freshly-copied /app/src/ rather than
+# from the venv's site-packages, which may be a cached layer built from an older
+# commit. PYTHONPATH=/app/src takes precedence over site-packages so every git
+# push is reflected immediately without requiring a Docker cache bust.
+ENV PYTHONPATH=/app/src
+
 WORKDIR /app
 
 # Copy source
 COPY src/ ./src/
 COPY constitution/ ./constitution/
+COPY prompts/ ./prompts/
 COPY config/ ./config/
 COPY scripts/ ./scripts/
 COPY pyproject.toml .
+
+# DEFINITIVE FIX: re-install the sfc package from the freshly-copied /app/src/.
+#
+# Problem: the builder stage installs sfc into /opt/venv/lib/site-packages/.
+# Docker may cache that builder stage from a previous commit, so site-packages
+# could contain old code (without _sanitize_payload, without ExecutiveDecisionAI
+# defaults, etc.).  ENV PYTHONPATH=/app/src above is one guard; this RUN is the
+# second, independent guard: it overwrites site-packages with the current source.
+#
+# The COPY src/ layer above has a different hash on every git push, so Docker
+# CANNOT cache this RUN — it always re-installs from the latest committed code.
+RUN pip install --no-cache-dir .
 
 # Create runtime artifact directories owned by non-root user
 RUN mkdir -p \
@@ -81,4 +103,4 @@ USER sfc
 HEALTHCHECK --interval=30s --timeout=15s --start-period=20s --retries=3 \
     CMD python scripts/healthcheck.py || exit 1
 
-CMD ["python", "scripts/run_demo.py", "--scenario", "transfer"]
+CMD ["python", "scripts/railway_worker.py"]

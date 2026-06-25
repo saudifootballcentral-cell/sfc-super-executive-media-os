@@ -31,6 +31,65 @@ from typing import Any
 import httpx
 
 # ---------------------------------------------------------------------------
+# RUNTIME IMPORT DIAGNOSTICS
+# Printed unconditionally at startup so Railway logs always show which code
+# is actually running — regardless of Docker caching or PYTHONPATH state.
+# ---------------------------------------------------------------------------
+
+def _print_runtime_diagnostics() -> None:
+    import inspect
+    import subprocess
+
+    print("=== RUNTIME IMPORT DIAGNOSTICS ===")
+    print("cwd:", os.getcwd())
+    print("PYTHONPATH:", os.environ.get("PYTHONPATH"))
+    print("sys.path:", sys.path)
+
+    try:
+        print("git HEAD:", subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip())
+    except Exception as e:
+        print("git HEAD unavailable:", repr(e))
+
+    import sfc
+    print("sfc.__file__:", getattr(sfc, "__file__", None))
+
+    from sfc.ai.providers import claude
+    print("claude.__file__:", getattr(claude, "__file__", None))
+    print("has _sanitize_payload:", hasattr(claude, "_sanitize_payload"))
+    print("has _is_permanent_error:", hasattr(claude, "_is_permanent_error"))
+
+    if hasattr(claude, "_sanitize_payload"):
+        print("_sanitize_payload source file:", inspect.getsourcefile(claude._sanitize_payload))
+        print("_sanitize_payload source:")
+        print(inspect.getsource(claude._sanitize_payload))
+
+    try:
+        from sfc.models.executive_decision import ExecutiveDecisionAI
+        print("ExecutiveDecisionAI fields:", list(ExecutiveDecisionAI.model_fields.keys()))
+    except Exception as e:
+        print("ExecutiveDecisionAI import failed:", repr(e))
+
+    # Correct import path — always check this too
+    try:
+        from sfc.ai.structured_output import ExecutiveDecisionAI as _EDA
+        print("ExecutiveDecisionAI (sfc.ai.structured_output) fields:", list(_EDA.model_fields.keys()))
+        required = [name for name, f in _EDA.model_fields.items() if f.is_required()]
+        print("ExecutiveDecisionAI required fields (must be 0):", required)
+    except Exception as e:
+        print("ExecutiveDecisionAI structured_output import failed:", repr(e))
+
+    try:
+        from sfc.war_rooms.operations.breaking_news.service import BreakingNewsCommandCenter
+        print("BreakingNewsCommandCenter has initialize:", hasattr(BreakingNewsCommandCenter, "initialize"))
+    except Exception as e:
+        print("BreakingNewsCommandCenter import failed:", repr(e))
+
+    print("=== END RUNTIME IMPORT DIAGNOSTICS ===")
+
+
+_print_runtime_diagnostics()
+
+# ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
 

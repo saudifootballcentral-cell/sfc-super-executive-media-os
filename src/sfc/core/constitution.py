@@ -3,12 +3,23 @@
 from __future__ import annotations
 
 import logging
+import os
 from functools import lru_cache
 from pathlib import Path
 
 logger = logging.getLogger("sfc.core.constitution")
 
-_CONSTITUTION_PATH = Path(__file__).parents[4] / "constitution" / "OFFICIAL_CONSTITUTION.md"
+
+def _find_constitution_path() -> Path:
+    """Locate constitution file via SFC_REPO_ROOT env var or source-tree heuristics."""
+    env_root = os.environ.get("SFC_REPO_ROOT", "")
+    if env_root:
+        return Path(env_root) / "constitution" / "OFFICIAL_CONSTITUTION.md"
+    # This file lives at src/sfc/core/constitution.py → parents[3] = repo root
+    return Path(__file__).parents[3] / "constitution" / "OFFICIAL_CONSTITUTION.md"
+
+
+_CONSTITUTION_PATH = _find_constitution_path()
 
 _EXECUTIVE_PREAMBLE = """\
 You are SFC Super Executive.

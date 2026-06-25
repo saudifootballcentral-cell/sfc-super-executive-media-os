@@ -106,6 +106,55 @@ class TestGitIgnore:
         assert "artifacts/" in gitignore, "artifacts/ must be in .gitignore — runtime outputs must not be committed"
 
 
+class TestRailwayWorker:
+    def test_railway_worker_exists(self) -> None:
+        assert (ROOT / "scripts" / "railway_worker.py").exists(), (
+            "scripts/railway_worker.py missing — this is the production start command for Railway"
+        )
+
+    def test_dockerfile_cmd_uses_railway_worker(self) -> None:
+        content = (ROOT / "Dockerfile").read_text()
+        assert "railway_worker.py" in content, (
+            "Dockerfile CMD must use railway_worker.py — run_demo.py exits after one scenario "
+            "and is not suitable as a long-running Railway process"
+        )
+
+    def test_railway_toml_start_command_uses_worker(self) -> None:
+        content = (ROOT / "railway.toml").read_text()
+        assert "railway_worker.py" in content, (
+            "railway.toml startCommand must use railway_worker.py"
+        )
+
+    def test_worker_imports_master_orchestrator(self) -> None:
+        content = (ROOT / "scripts" / "railway_worker.py").read_text()
+        assert "MasterOrchestrator" in content, "worker must import and use MasterOrchestrator"
+
+    def test_worker_does_not_publish_by_default(self) -> None:
+        content = (ROOT / "scripts" / "railway_worker.py").read_text()
+        assert "LIVE_PUBLISHING_ENABLED" in content, "worker must check LIVE_PUBLISHING_ENABLED"
+        assert '"false"' in content or "false" in content, (
+            "worker must default to dry-run (LIVE_PUBLISHING_ENABLED=false)"
+        )
+
+    def test_worker_verifies_ffmpeg(self) -> None:
+        content = (ROOT / "scripts" / "railway_worker.py").read_text()
+        assert "ffmpeg" in content and "ffprobe" in content, (
+            "worker must verify ffmpeg and ffprobe at startup"
+        )
+
+    def test_worker_has_heartbeat(self) -> None:
+        content = (ROOT / "scripts" / "railway_worker.py").read_text()
+        assert "heartbeat" in content.lower() or "sleep" in content, (
+            "worker must have a heartbeat/sleep loop to stay alive"
+        )
+
+    def test_worker_exits_nonzero_on_fatal_error(self) -> None:
+        content = (ROOT / "scripts" / "railway_worker.py").read_text()
+        assert "sys.exit(1)" in content, (
+            "worker must call sys.exit(1) on fatal startup errors"
+        )
+
+
 class TestDeploymentDocs:
     def test_railway_deployment_doc_exists(self) -> None:
         assert (ROOT / "docs" / "RAILWAY_DEPLOYMENT.md").exists(), "docs/RAILWAY_DEPLOYMENT.md missing"
