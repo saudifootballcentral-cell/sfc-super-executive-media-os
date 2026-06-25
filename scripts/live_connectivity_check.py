@@ -140,7 +140,7 @@ query SFCAuth {
 # Current Channel fields: id, name, displayName, service, avatar, isQueuePaused
 # "handle" was removed from the Channel type; "name" is the platform handle/username.
 _QUERY_GET_CHANNELS = """
-query SFCGetChannels($organizationId: String!) {
+query SFCGetChannels($organizationId: OrganizationId!) {
   channels(input: { organizationId: $organizationId }) {
     id
     name

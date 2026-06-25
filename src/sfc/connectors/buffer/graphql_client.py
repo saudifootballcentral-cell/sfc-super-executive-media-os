@@ -49,7 +49,7 @@ query SFCWhoAmI {
 # Channel fields per current schema: id, name, displayName, service, avatar, isQueuePaused
 # "handle" was removed from the Channel type; "name" carries the platform username.
 _QUERY_GET_CHANNELS = """
-query SFCGetChannels($organizationId: String!) {
+query SFCGetChannels($organizationId: OrganizationId!) {
   channels(input: { organizationId: $organizationId }) {
     id
     name
