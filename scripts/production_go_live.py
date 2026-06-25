@@ -90,6 +90,14 @@ def _print_runtime_diagnostics() -> None:
 _print_runtime_diagnostics()
 
 # ---------------------------------------------------------------------------
+# Script version — printed at startup so Railway logs prove which build is live.
+# Increment this whenever Phase V gate logic changes.
+# ---------------------------------------------------------------------------
+
+_SCRIPT_VERSION = "3.1.0-phase-vi-fresh-client"
+print(f"[SFC-GOLIVE] production_go_live.py version={_SCRIPT_VERSION}", flush=True)
+
+# ---------------------------------------------------------------------------
 # Railway environment snapshot — captured BEFORE any code can override it.
 # This is the authoritative record of what Railway configured at container
 # startup. Phase V uses this (not the process-overridden value) as the
@@ -964,14 +972,23 @@ async def phase_vi_publish(report: GoLiveReport, phase_i: PhaseResult, phase_iii
     )
 
     try:
+        from sfc.connectors.buffer.api_client import BufferAPIClient
         from sfc.connectors.buffer.models import BufferPlatform, BufferPost
         from sfc.connectors.buffer.publisher import BufferPublisher
 
-        publisher = BufferPublisher()
+        # Phase III created the BufferAPIClient singleton with _live=False (enforced during I–IV).
+        # Passing a fresh client bypasses the stale singleton so the live HTTP call is actually made.
+        live_client = BufferAPIClient()
+        publisher = BufferPublisher(client=live_client)
 
-        if not publisher._live:
+        _print(f"  Publisher: live={publisher._live}  client_live={publisher._client._live}")
+
+        if not publisher._live or not publisher._client._live:
             os.environ["LIVE_PUBLISHING_ENABLED"] = "false"
-            phase.fail("BufferPublisher not in live mode despite LIVE_PUBLISHING_ENABLED=true")
+            phase.fail(
+                f"BufferPublisher not fully in live mode: "
+                f"publisher._live={publisher._live} client._live={publisher._client._live}"
+            )
             _fail("Phase VI: FAIL — publisher dry-run flag mismatch")
             phase.complete(passed=False)
             return phase
