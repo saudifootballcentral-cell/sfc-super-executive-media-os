@@ -86,8 +86,8 @@ class BufferRetryManager:
                 record.delay_seconds = delay
                 record.attempt += 1
                 logger.warning(
-                    "[Retry] %s transient error (status=%d) — retry %d/%d in %ds",
-                    key, exc.status_code, record.attempt, len(self._delays), delay,
+                    "[Retry] %s transient error (status=%d): %s — retry %d/%d in %ds",
+                    key, exc.status_code, str(exc)[:120], record.attempt, len(self._delays), delay,
                 )
                 if not skip_wait:
                     await asyncio.sleep(delay)
