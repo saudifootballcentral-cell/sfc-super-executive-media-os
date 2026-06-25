@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import time
 from typing import Any
 
@@ -16,16 +17,18 @@ logger = logging.getLogger("sfc.ai.providers.claude")
 _DEFAULT_TIMEOUT = 30
 _DEFAULT_MAX_RETRIES = 3
 
-# Models that no longer accept temperature/top_p/top_k (returns HTTP 400)
+# All Claude 4.x models (e.g. claude-opus-4-8, claude-sonnet-4-6, claude-haiku-4-5-*)
+# and the Claude 5 family (Fable 5, Mythos 5) reject temperature/top_p/top_k (HTTP 400).
+_CLAUDE_4X_RE = re.compile(r"^claude-[a-z]+-4-")
 _NO_SAMPLING_PARAMS_PREFIXES = (
-    "claude-opus-4-7",
-    "claude-opus-4-8",
     "claude-fable-5",
     "claude-mythos-5",
 )
 
 
 def _supports_temperature(model: str) -> bool:
+    if _CLAUDE_4X_RE.match(model):
+        return False
     return not any(model.startswith(prefix) for prefix in _NO_SAMPLING_PARAMS_PREFIXES)
 
 
