@@ -90,6 +90,14 @@ def _print_runtime_diagnostics() -> None:
 _print_runtime_diagnostics()
 
 # ---------------------------------------------------------------------------
+# Script version — printed at startup so Railway logs prove which build is live.
+# Increment this whenever Phase V gate logic changes.
+# ---------------------------------------------------------------------------
+
+_SCRIPT_VERSION = "3.0.0-phase-v-snapshot-fix"
+print(f"[SFC-GOLIVE] production_go_live.py version={_SCRIPT_VERSION}", flush=True)
+
+# ---------------------------------------------------------------------------
 # Railway environment snapshot — captured BEFORE any code can override it.
 # This is the authoritative record of what Railway configured at container
 # startup. Phase V uses this (not the process-overridden value) as the
