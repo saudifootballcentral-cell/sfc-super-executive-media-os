@@ -26,6 +26,10 @@ class BreakingNewsCommandCenter:
     def __init__(self) -> None:
         self._active_alerts: dict[str, BreakingNewsAlert] = {}
 
+    async def initialize(self) -> None:
+        """No-op async initializer — satisfies callers that await center.initialize()."""
+        logger.debug("[BreakingNews] CommandCenter initialized")
+
     async def detect(
         self,
         headline: str,
