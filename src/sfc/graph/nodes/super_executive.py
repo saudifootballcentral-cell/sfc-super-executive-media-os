@@ -156,11 +156,13 @@ async def _call_claude(state: SFCState, api_key: str) -> dict[str, Any]:
     )
 
     try:
-        message = await client.messages.create(
-            model="claude-opus-4-8",
-            max_tokens=1024,
-            system=system_prompt,
-            messages=[
+        from sfc.ai.providers.claude import _sanitize_payload
+        _model = "claude-opus-4-8"
+        _create_kwargs: dict = {
+            "model": _model,
+            "max_tokens": 1024,
+            "system": system_prompt,
+            "messages": [
                 {
                     "role": "user",
                     "content": (
@@ -182,7 +184,13 @@ async def _call_claude(state: SFCState, api_key: str) -> dict[str, Any]:
                     ),
                 }
             ],
+        }
+        _sanitize_payload(_model, _create_kwargs)
+        logger.info(
+            "[SuperExecutive] Direct Claude request: model=%s keys=%s",
+            _model, sorted(_create_kwargs.keys()),
         )
+        message = await client.messages.create(**_create_kwargs)
 
         raw = message.content[0].text.strip()
         decision = extract_json(raw)

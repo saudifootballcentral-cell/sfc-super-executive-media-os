@@ -16,6 +16,7 @@ from sfc.ai.models import ModelRequest, ModelResponse
 from sfc.ai.providers.claude import (
     ClaudeProvider,
     _is_permanent_error,
+    _sanitize_payload,
     _supports_temperature,
 )
 
@@ -46,6 +47,59 @@ class TestSupportsTemperature:
 
     def test_claude_3_sonnet_returns_true(self) -> None:
         assert _supports_temperature("claude-3-sonnet-20240229") is True
+
+
+# ---------------------------------------------------------------------------
+# _sanitize_payload unit tests
+# ---------------------------------------------------------------------------
+
+class TestSanitizePayload:
+    """_sanitize_payload strips temperature/top_p/top_k for Claude 4.x/5.x."""
+
+    def test_removes_temperature_from_opus_4_8(self) -> None:
+        kwargs = {"model": "claude-opus-4-8", "temperature": 0.7, "max_tokens": 100}
+        _sanitize_payload("claude-opus-4-8", kwargs)
+        assert "temperature" not in kwargs
+
+    def test_removes_top_p_from_sonnet_4_6(self) -> None:
+        kwargs = {"model": "claude-sonnet-4-6", "top_p": 0.9, "max_tokens": 100}
+        _sanitize_payload("claude-sonnet-4-6", kwargs)
+        assert "top_p" not in kwargs
+
+    def test_removes_top_k_from_haiku_4_5(self) -> None:
+        kwargs = {"model": "claude-haiku-4-5-20251001", "top_k": 40, "max_tokens": 100}
+        _sanitize_payload("claude-haiku-4-5-20251001", kwargs)
+        assert "top_k" not in kwargs
+
+    def test_removes_all_three_from_opus_4_8(self) -> None:
+        kwargs = {
+            "model": "claude-opus-4-8",
+            "temperature": 0.3,
+            "top_p": 0.9,
+            "top_k": 40,
+            "max_tokens": 100,
+        }
+        _sanitize_payload("claude-opus-4-8", kwargs)
+        assert "temperature" not in kwargs
+        assert "top_p" not in kwargs
+        assert "top_k" not in kwargs
+        assert kwargs["max_tokens"] == 100  # other keys untouched
+
+    def test_preserves_temperature_for_claude_3(self) -> None:
+        kwargs = {"model": "claude-3-opus-20240229", "temperature": 0.7}
+        _sanitize_payload("claude-3-opus-20240229", kwargs)
+        assert kwargs["temperature"] == 0.7
+
+    def test_is_safe_when_no_sampling_params_present(self) -> None:
+        kwargs = {"model": "claude-opus-4-8", "max_tokens": 100, "messages": []}
+        result = _sanitize_payload("claude-opus-4-8", kwargs)
+        assert result is kwargs  # returns same dict
+        assert kwargs == {"model": "claude-opus-4-8", "max_tokens": 100, "messages": []}
+
+    def test_removes_temperature_from_fable_5(self) -> None:
+        kwargs = {"temperature": 0.5, "max_tokens": 100}
+        _sanitize_payload("claude-fable-5", kwargs)
+        assert "temperature" not in kwargs
 
 
 # ---------------------------------------------------------------------------
@@ -155,6 +209,13 @@ class TestClaudeProviderPayload:
         assert "temperature" not in captured
 
     @pytest.mark.asyncio
+    async def test_opus_4_8_payload_has_no_top_p_or_top_k(self) -> None:
+        """claude-opus-4-8 must never send top_p or top_k."""
+        captured = await self._run_with_capture("claude-opus-4-8")
+        assert "top_p" not in captured, f"top_p must not be in payload; keys: {sorted(captured)}"
+        assert "top_k" not in captured, f"top_k must not be in payload; keys: {sorted(captured)}"
+
+    @pytest.mark.asyncio
     async def test_payload_always_includes_required_keys(self) -> None:
         """model, max_tokens, system, messages must always be present."""
         captured = await self._run_with_capture("claude-opus-4-8")
@@ -223,3 +284,47 @@ class TestPermanentErrorHandling:
         assert call_count == 3, (
             f"Transient error should be retried 3 times total, got {call_count}"
         )
+
+
+# ---------------------------------------------------------------------------
+# SuperExecutive _call_claude direct path test
+# ---------------------------------------------------------------------------
+
+class TestSuperExecutiveDirectPath:
+    """Verify super_executive._call_claude() never sends sampling params."""
+
+    @pytest.mark.asyncio
+    async def test_direct_call_claude_has_no_temperature(self) -> None:
+        """_call_claude() in super_executive uses _sanitize_payload — no temperature sent."""
+        from sfc.graph.nodes.super_executive import _call_claude
+
+        captured: dict = {}
+
+        async def fake_create(**kwargs):
+            captured.update(kwargs)
+            msg = MagicMock()
+            msg.content = [MagicMock(text='{"routing": "planning", "priority": "high"}')]
+            return msg
+
+        mock_messages = MagicMock()
+        mock_messages.create = fake_create
+        mock_client = MagicMock()
+        mock_client.messages = mock_messages
+
+        state = {
+            "task_type": "news",
+            "task_payload": {"headline": "test"},
+            "run_id": "test-run",
+            "started_at": "2026-01-01T00:00:00",
+        }
+
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test"}):
+            with patch("anthropic.AsyncAnthropic", return_value=mock_client):
+                await _call_claude(state, "sk-test")
+
+        assert "temperature" not in captured, (
+            f"_call_claude must not send temperature; got keys: {sorted(captured)}"
+        )
+        assert "top_p" not in captured
+        assert "top_k" not in captured
+        assert captured.get("model") == "claude-opus-4-8"

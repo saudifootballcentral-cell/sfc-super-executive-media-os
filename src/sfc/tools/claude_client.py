@@ -97,12 +97,19 @@ class ClaudeClient:
                 if json_mode:
                     msg_content += "\n\nRespond with valid JSON only. No markdown, no explanation."
 
-                message = await client.messages.create(
-                    model=model,
-                    max_tokens=max_tokens,
-                    system=system,
-                    messages=[{"role": "user", "content": msg_content}],
+                from sfc.ai.providers.claude import _is_permanent_error, _sanitize_payload
+                _create_kwargs: dict = {
+                    "model": model,
+                    "max_tokens": max_tokens,
+                    "system": system,
+                    "messages": [{"role": "user", "content": msg_content}],
+                }
+                _sanitize_payload(model, _create_kwargs)
+                logger.info(
+                    "[ClaudeClient] request model=%s keys=%s",
+                    model, sorted(_create_kwargs.keys()),
                 )
+                message = await client.messages.create(**_create_kwargs)
 
                 raw_text = message.content[0].text.strip()
                 input_tokens = message.usage.input_tokens
@@ -127,6 +134,9 @@ class ClaudeClient:
                 return result
 
             except Exception as exc:
+                if _is_permanent_error(exc):
+                    logger.error("[ClaudeClient] Permanent error (not retrying): %s", exc)
+                    raise
                 wait = 2 ** attempt
                 logger.warning(
                     "[Claude] Attempt %d/%d failed: %s — retrying in %ds",

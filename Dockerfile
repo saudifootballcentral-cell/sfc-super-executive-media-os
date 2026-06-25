@@ -61,6 +61,12 @@ ENV VIDEO_PROCESSING_ENABLED=false
 # Repo root so constitution.py and prompt_loader.py resolve files correctly
 ENV SFC_REPO_ROOT=/app
 
+# CRITICAL: ensure Python imports from the freshly-copied /app/src/ rather than
+# from the venv's site-packages, which may be a cached layer built from an older
+# commit. PYTHONPATH=/app/src takes precedence over site-packages so every git
+# push is reflected immediately without requiring a Docker cache bust.
+ENV PYTHONPATH=/app/src
+
 WORKDIR /app
 
 # Copy source

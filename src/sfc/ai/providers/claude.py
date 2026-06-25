@@ -38,6 +38,9 @@ _PERMANENT_ERROR_PATTERNS = (
     "deprecated for this model",
 )
 
+# Sampling params rejected by ALL Claude 4.x and 5.x models.
+_REJECTED_SAMPLING_PARAMS = frozenset({"temperature", "top_p", "top_k"})
+
 
 def _supports_temperature(model: str) -> bool:
     """Return True only for pre-4.x Claude models that still accept temperature."""
@@ -46,6 +49,19 @@ def _supports_temperature(model: str) -> bool:
     if any(model.startswith(prefix) for prefix in _NO_SAMPLING_PARAMS_PREFIXES):
         return False
     return True
+
+
+def _sanitize_payload(model: str, kwargs: dict) -> dict:
+    """Strip sampling params rejected by Claude 4.x/5.x models.
+
+    Called unconditionally as the final guard immediately before every
+    messages.create() call.  Removes temperature, top_p, top_k in-place
+    for any model that does not support them.  Returns the same dict.
+    """
+    if not _supports_temperature(model):
+        for param in _REJECTED_SAMPLING_PARAMS:
+            kwargs.pop(param, None)
+    return kwargs
 
 
 def _is_permanent_error(exc: Exception) -> bool:
@@ -113,9 +129,13 @@ class ClaudeProvider(AIProvider):
                 if _supports_temperature(model):
                     create_kwargs["temperature"] = request.temperature
 
-                logger.debug(
-                    "[Claude] %s payload_keys=%s temperature_included=%s",
-                    model, sorted(create_kwargs.keys()), "temperature" in create_kwargs,
+                # Unconditional final guard — removes temperature/top_p/top_k for any
+                # Claude 4.x/5.x model even if the check above somehow passed them in.
+                _sanitize_payload(model, create_kwargs)
+
+                logger.info(
+                    "[Claude] request model=%s keys=%s",
+                    model, sorted(create_kwargs.keys()),
                 )
 
                 message = await asyncio.wait_for(
