@@ -17,6 +17,7 @@ from sfc.video_intelligence.ingestion.models import VideoIngestionResult, VideoS
 from sfc.video_intelligence.interview_detection.models import InterviewDetectionResult
 from sfc.video_intelligence.learning.models import ClipPerformanceRecord
 from sfc.video_intelligence.packaging.models import ClipPackage
+from sfc.video_intelligence.rendering.models import RenderedVideo
 from sfc.video_intelligence.scoring.models import ClipScore
 from sfc.video_intelligence.understanding.models import VideoUnderstandingResult
 
@@ -30,6 +31,7 @@ class ClipPipelineResult:
     score: ClipScore
     enhancement: EnhancementResult
     captioning: CaptioningResult
+    rendering: RenderedVideo | None
     package: ClipPackage
     governance: ClipGovernanceResult
     publish_record: dict
@@ -95,6 +97,7 @@ class VideoIntelligenceOrchestrator:
         from sfc.video_intelligence.scoring.service import get_clip_scoring_engine
         from sfc.video_intelligence.enhancement.service import get_clip_enhancement_engine
         from sfc.video_intelligence.captioning.service import get_auto_captioning_engine
+        from sfc.video_intelligence.rendering.service import get_video_rendering_service
         from sfc.video_intelligence.packaging.service import get_clip_packaging_engine
         from sfc.video_intelligence.governance.service import get_clip_governance_layer
         from sfc.video_intelligence.publishing.service import get_clip_publishing_integration
@@ -108,6 +111,7 @@ class VideoIntelligenceOrchestrator:
         self._scoring = get_clip_scoring_engine()
         self._enhancement = get_clip_enhancement_engine()
         self._captioning = get_auto_captioning_engine()
+        self._rendering = get_video_rendering_service()
         self._packaging = get_clip_packaging_engine()
         self._governance = get_clip_governance_layer()
         self._publishing = get_clip_publishing_integration()
@@ -225,6 +229,24 @@ class VideoIntelligenceOrchestrator:
             logger.error("[Orchestrator] Captioning error clip=%s: %s", clip.clip_id, exc)
             captioning = CaptioningResult(clip_id=clip.clip_id)
 
+        # Stage 8.5: Render — brand, subtitle, and mix each enhanced variant
+        rendering: RenderedVideo | None = None
+        try:
+            best_variant = (
+                enhancement.ready_variants[0] if enhancement.ready_variants else None
+            )
+            if best_variant:
+                rendering = await self._rendering.render_clip(
+                    clip=clip,
+                    variant=best_variant,
+                    captioning=captioning,
+                )
+                # Update the variant's local_path so packaging picks up the rendered file
+                if rendering.is_ready:
+                    best_variant.local_path = rendering.local_path
+        except Exception as exc:
+            logger.error("[Orchestrator] Rendering error clip=%s: %s", clip.clip_id, exc)
+
         # Stage 9: Package
         try:
             package = await self._packaging.package(clip, score, enhancement, captioning)
@@ -267,6 +289,7 @@ class VideoIntelligenceOrchestrator:
             score=score,
             enhancement=enhancement,
             captioning=captioning,
+            rendering=rendering,
             package=package,
             governance=governance,
             publish_record=publish_record,
