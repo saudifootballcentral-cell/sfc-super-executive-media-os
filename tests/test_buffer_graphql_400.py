@@ -402,15 +402,17 @@ class TestMutationStructure:
         assert "ChannelId!" in _MUTATION_CREATE_POST
         assert "$channelId: String!" not in _MUTATION_CREATE_POST
 
-    def test_scheduling_type_immediate_present(self):
-        """schedulingType: IMMEDIATE must be in the mutation input."""
+    def test_scheduling_type_direct_present(self):
+        """schedulingType: DIRECT must be in the mutation input (IMMEDIATE is invalid in Buffer schema)."""
         from sfc.connectors.buffer.graphql_client import _MUTATION_CREATE_POST
-        assert "schedulingType: IMMEDIATE" in _MUTATION_CREATE_POST
+        assert "schedulingType: DIRECT" in _MUTATION_CREATE_POST
+        assert "schedulingType: IMMEDIATE" not in _MUTATION_CREATE_POST
 
-    def test_share_mode_direct_present(self):
-        """shareMode: DIRECT must be in the mutation input."""
+    def test_mode_post_present_not_share_mode(self):
+        """mode: POST must be in the input; field is 'mode' not 'shareMode'."""
         from sfc.connectors.buffer.graphql_client import _MUTATION_CREATE_POST
-        assert "shareMode: DIRECT" in _MUTATION_CREATE_POST
+        assert "mode: POST" in _MUTATION_CREATE_POST
+        assert "shareMode:" not in _MUTATION_CREATE_POST
 
     def test_post_action_success_inline_fragment(self):
         """Response must use inline fragment on PostActionSuccess, not direct 'post' field."""
@@ -482,8 +484,8 @@ mutation SFCCreatePost($channelId: ChannelId!, $text: String!) {
   createPost(input: {
     channelId: $channelId
     text: $text
-    schedulingType: IMMEDIATE
-    shareMode: DIRECT
+    schedulingType: DIRECT
+    mode: POST
   }) {
     ... on PostActionSuccess {
       post { id }
