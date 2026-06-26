@@ -16,10 +16,13 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
+
+_OP_NAME_RE = re.compile(r'\b(?:query|mutation|subscription)\s+(\w+)', re.IGNORECASE)
 
 logger = logging.getLogger("sfc.connectors.buffer.graphql_client")
 
@@ -276,6 +279,8 @@ class BufferGraphQLClient:
         """Execute a GraphQL query or mutation and return the `data` payload."""
         if not self._live:
             return {"dry_run": True}
+        operation_name = self._extract_operation_name(gql)
+        variable_keys: list[str] = list(variables.keys()) if variables else []
         headers = {
             "Authorization": f"Bearer {self._token}",
             "Content-Type": "application/json",
@@ -286,8 +291,11 @@ class BufferGraphQLClient:
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as client:
                 resp = await client.post(self._url, json=body, headers=headers)
-            logger.debug("[BufferGraphQL] POST %s → %d", self._url, resp.status_code)
-            return self._handle_response(resp)
+            logger.debug(
+                "[BufferGraphQL] POST %s operation=%s variable_keys=%s → %d",
+                self._url, operation_name, variable_keys, resp.status_code,
+            )
+            return self._handle_response(resp, operation_name, variable_keys)
         except httpx.TimeoutException as exc:
             raise BufferGraphQLError(f"Timeout: {exc}", permanent=False) from exc
         except httpx.RequestError as exc:
@@ -297,10 +305,35 @@ class BufferGraphQLClient:
     # Internal
     # ------------------------------------------------------------------
 
-    def _handle_response(self, resp: httpx.Response) -> dict[str, Any]:
+    def _handle_response(
+        self,
+        resp: httpx.Response,
+        operation_name: str = "unknown",
+        variable_keys: list[str] | None = None,
+    ) -> dict[str, Any]:
         if resp.status_code in (400, 401, 403):
+            gql_errors = self._log_400_diagnostics(resp, operation_name, variable_keys or [])
+            if gql_errors:
+                messages = "; ".join(e.get("message", str(e)) for e in gql_errors)
+                codes = [
+                    (e.get("extensions") or {}).get("code", "")
+                    for e in gql_errors
+                    if (e.get("extensions") or {}).get("code")
+                ]
+                code_str = f" [{', '.join(codes)}]" if codes else ""
+                raise BufferGraphQLError(
+                    f"BUFFER_GRAPHQL_BAD_REQUEST status={resp.status_code} "
+                    f"operation={operation_name}: {messages}{code_str}",
+                    status_code=resp.status_code,
+                    permanent=True,
+                )
             msg = self._extract_error(resp)
-            raise BufferGraphQLError(msg, status_code=resp.status_code, permanent=True)
+            raise BufferGraphQLError(
+                f"BUFFER_GRAPHQL_BAD_REQUEST status={resp.status_code} "
+                f"operation={operation_name}: {msg}",
+                status_code=resp.status_code,
+                permanent=True,
+            )
         if resp.status_code >= 500:
             raise BufferGraphQLError(
                 f"Buffer server error {resp.status_code}",
@@ -317,7 +350,6 @@ class BufferGraphQLClient:
         errors = body.get("errors")
         if errors:
             messages = "; ".join(e.get("message", str(e)) for e in errors)
-            # Treat auth errors as permanent
             permanent = any(
                 "unauthorized" in e.get("message", "").lower()
                 or "forbidden" in e.get("message", "").lower()
@@ -325,6 +357,51 @@ class BufferGraphQLClient:
             )
             raise BufferGraphQLError(messages, status_code=200, permanent=permanent)
         return body.get("data", body)
+
+    def _log_400_diagnostics(
+        self,
+        resp: httpx.Response,
+        operation_name: str,
+        variable_keys: list[str],
+    ) -> list[dict[str, Any]]:
+        """Log HTTP 400 details safely — no secrets, no auth headers, no token values."""
+        try:
+            body = resp.json()
+        except Exception:
+            logger.error(
+                "[BufferGraphQL] BUFFER_GRAPHQL_BAD_REQUEST status=400 "
+                "operation=%s variable_keys=%s body=(non-JSON len=%d)",
+                operation_name, variable_keys, len(resp.text),
+            )
+            return []
+
+        gql_errors: list[dict[str, Any]] = body.get("errors") or []
+        if gql_errors:
+            for i, err in enumerate(gql_errors):
+                message = err.get("message", "(no message)")
+                code = (err.get("extensions") or {}).get("code", "")
+                locations = err.get("locations") or []
+                path = err.get("path") or []
+                logger.error(
+                    "[BufferGraphQL] BUFFER_GRAPHQL_BAD_REQUEST status=400 "
+                    "operation=%s variable_keys=%s "
+                    "error[%d]: message=%r code=%r locations=%s path=%s",
+                    operation_name, variable_keys, i,
+                    message, code, locations, path,
+                )
+        else:
+            top_message = str(body.get("message", body.get("error", "")))[:200]
+            logger.error(
+                "[BufferGraphQL] BUFFER_GRAPHQL_BAD_REQUEST status=400 "
+                "operation=%s variable_keys=%s body_keys=%s message=%r",
+                operation_name, variable_keys, list(body.keys()), top_message,
+            )
+        return gql_errors
+
+    @staticmethod
+    def _extract_operation_name(gql: str) -> str:
+        m = _OP_NAME_RE.search(gql)
+        return m.group(1) if m else "anonymous"
 
     def _extract_error(self, resp: httpx.Response) -> str:
         try:
