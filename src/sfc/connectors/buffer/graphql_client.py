@@ -7,6 +7,9 @@ REST API (api.bufferapp.com/1) only accepts OAuth tokens; it rejects API Keys wi
 Endpoint : https://api.buffer.com
 Auth     : Authorization: Bearer <BUFFER_ACCESS_TOKEN>
 Dry-run  : when LIVE_PUBLISHING_ENABLED=false, no network calls are made.
+
+Channel type fields (current schema): id, name, displayName, service, avatar, isQueuePaused
+NOTE: "handle" was removed from the Channel type. Use "name" (platform handle/username).
 """
 
 from __future__ import annotations
@@ -24,7 +27,8 @@ _BUFFER_GRAPHQL_URL = "https://api.buffer.com/graphql"
 _DEFAULT_TIMEOUT = 30.0
 
 # ---------------------------------------------------------------------------
-# Lightweight validation query — reads nothing sensitive, never mutates
+# Auth-only query — validates token, returns user + org IDs (no channels).
+# Channel type excluded here: fetching channels requires an organizationId.
 # ---------------------------------------------------------------------------
 _QUERY_WHOAMI = """
 query SFCWhoAmI {
@@ -33,25 +37,26 @@ query SFCWhoAmI {
     name
     email
     timezone
-    channels {
+    organizations {
       id
-      service
       name
-      handle
-      avatar
     }
   }
 }
 """
 
-# Fallback if `account` root field is not available in this API version
-_QUERY_WHOAMI_ALT = """
-query SFCWhoAmIAlt {
-  currentUser {
+# Channel discovery — requires organizationId from the account query above.
+# Channel fields per current schema: id, name, displayName, service, avatar, isQueuePaused
+# "handle" was removed from the Channel type; "name" carries the platform username.
+_QUERY_GET_CHANNELS = """
+query SFCGetChannels($organizationId: OrganizationId!) {
+  channels(input: { organizationId: $organizationId }) {
     id
     name
-    email
-    timezone
+    displayName
+    service
+    avatar
+    isQueuePaused
   }
 }
 """
@@ -99,14 +104,19 @@ class BufferGraphQLUser:
 class BufferGraphQLChannel:
     channel_id: str
     service: str
-    name: str
-    handle: str
+    name: str        # platform username / handle (Buffer schema field: name)
+    display_name: str  # human-readable display name (Buffer schema field: displayName)
     avatar: str
     raw: dict[str, Any] = field(default_factory=dict)
 
     @property
+    def handle(self) -> str:
+        """Backwards-compat alias: returns name (the platform handle/username)."""
+        return self.name
+
+    @property
     def service_username(self) -> str:
-        return self.handle or self.name
+        return self.name
 
 
 class BufferGraphQLClient:
@@ -158,11 +168,7 @@ class BufferGraphQLClient:
             )
         try:
             data = await self.query(_QUERY_WHOAMI)
-            account = data.get("account") or data.get("currentUser", {})
-            if not account:
-                # Try alt query if primary returned no account field
-                data = await self.query(_QUERY_WHOAMI_ALT)
-                account = data.get("currentUser", {})
+            account = data.get("account", {})
             if not account:
                 logger.warning("[BufferGraphQL] Validation query returned no account data")
                 return None
@@ -181,17 +187,44 @@ class BufferGraphQLClient:
             return None
 
     async def get_channels(self) -> list[BufferGraphQLChannel]:
-        """Return connected channels from the account query."""
+        """Return connected channels via org-scoped channels query.
+
+        Flow: query account for org IDs → query channels per org.
+        API Keys only work on the GraphQL endpoint (not REST).
+        """
         if not self._token:
             return []
         if not self._live:
             logger.info("[BufferGraphQL][DRY-RUN] Channel discovery skipped")
             return []
         try:
-            data = await self.query(_QUERY_WHOAMI)
-            account = data.get("account", {})
-            raw_channels = account.get("channels", [])
-            return [self._parse_channel(c) for c in raw_channels if c.get("id")]
+            # Step 1: get organization IDs
+            account_data = await self.query(_QUERY_WHOAMI)
+            account = account_data.get("account", {})
+            orgs = account.get("organizations", [])
+            if not orgs:
+                logger.info("[BufferGraphQL] No organizations found on account")
+                return []
+
+            # Step 2: get channels per org
+            all_channels: list[BufferGraphQLChannel] = []
+            seen_ids: set[str] = set()
+            for org in orgs:
+                org_id = org.get("id", "")
+                if not org_id:
+                    continue
+                try:
+                    ch_data = await self.query(_QUERY_GET_CHANNELS, {"organizationId": org_id})
+                    for raw_ch in ch_data.get("channels", []):
+                        ch_id = str(raw_ch.get("id", ""))
+                        if ch_id and ch_id not in seen_ids:
+                            seen_ids.add(ch_id)
+                            all_channels.append(self._parse_channel(raw_ch))
+                except Exception as exc:
+                    logger.warning("[BufferGraphQL] Channel fetch failed for org %s: %s", org_id, exc)
+
+            logger.info("[BufferGraphQL] Discovered %d channel(s) across %d org(s)", len(all_channels), len(orgs))
+            return all_channels
         except Exception as exc:
             logger.error("[BufferGraphQL] Channel fetch failed: %s", exc)
             return []
@@ -301,11 +334,14 @@ class BufferGraphQLClient:
             return resp.text or f"HTTP {resp.status_code}"
 
     def _parse_channel(self, raw: dict[str, Any]) -> BufferGraphQLChannel:
+        # Buffer schema: "name" = platform handle/username, "displayName" = human-readable name
+        name = raw.get("name", "")
+        display_name = raw.get("displayName", name)
         return BufferGraphQLChannel(
             channel_id=str(raw.get("id", "")),
             service=raw.get("service", ""),
-            name=raw.get("name", ""),
-            handle=raw.get("handle", raw.get("serviceUsername", "")),
+            name=name,
+            display_name=display_name,
             avatar=raw.get("avatar", ""),
             raw=raw,
         )
