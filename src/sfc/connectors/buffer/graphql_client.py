@@ -67,10 +67,10 @@ query SFCGetChannels($organizationId: OrganizationId!) {
 # ---------------------------------------------------------------------------
 # Publish mutation — Buffer new API (API Key auth)
 #
-# Schema confirmed from live API errors (iterative):
+# Schema confirmed from live API errors + official docs:
 #   - channelId: ChannelId!  (not String!)
-#   - schedulingType: SchedulingType!  required; 'IMMEDIATE' invalid → try 'DIRECT'
-#   - mode: ShareMode!  required field named 'mode' (not 'shareMode')
+#   - schedulingType: automatic  (camelCase; IMMEDIATE/DIRECT are invalid)
+#   - mode: addToQueue  (camelCase ShareMode; POST/DIRECT are invalid)
 #   - Response: PostActionPayload union — must use inline fragments
 #     '... on PostActionSuccess { post { id } }'
 # ---------------------------------------------------------------------------
@@ -79,8 +79,8 @@ mutation SFCCreatePost($channelId: ChannelId!, $text: String!) {
   createPost(input: {
     channelId: $channelId
     text: $text
-    schedulingType: DIRECT
-    mode: POST
+    schedulingType: automatic
+    mode: addToQueue
   }) {
     ... on PostActionSuccess {
       post {

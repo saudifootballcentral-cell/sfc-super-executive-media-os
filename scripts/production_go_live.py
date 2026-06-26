@@ -94,7 +94,7 @@ _print_runtime_diagnostics()
 # Increment this whenever Phase V gate logic changes.
 # ---------------------------------------------------------------------------
 
-_SCRIPT_VERSION = "3.7.0-graphql-scheduling-mode-fix"
+_SCRIPT_VERSION = "3.8.0-graphql-camelcase-enums"
 print(f"[SFC-GOLIVE] production_go_live.py version={_SCRIPT_VERSION}", flush=True)
 
 # ---------------------------------------------------------------------------
