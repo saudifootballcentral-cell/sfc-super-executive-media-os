@@ -135,6 +135,20 @@ async def learning_node(state: SFCState) -> dict[str, Any]:
 
     logger.info("[Learning] %d lesson(s) extracted", len(lessons))
 
+    # Persist lessons for next-cycle retrieval
+    try:
+        from sfc.orchestration.persistence import get_persistence_provider
+        provider = get_persistence_provider()
+        if hasattr(provider, "save_learning"):
+            await provider.save_learning(state["run_id"], {
+                "lessons": lessons,
+                "task_type": task_type,
+                "pass_rate": pass_rate,
+                "timestamp": datetime.utcnow().isoformat(),
+            })
+    except Exception:
+        pass  # Persistence failure never breaks the pipeline
+
     return {
         "lessons_learned": lessons,
         "pipeline_stage": "learning_complete",

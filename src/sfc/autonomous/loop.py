@@ -63,11 +63,26 @@ class AutonomousLoop:
         try:
             # 1. Record scan tick
             self._metrics.record_scan()
-            items = await self._source.get_items()
-            logger.info("[Loop] Cycle start — source=%s total_items=%d", self._source.name, len(items))
+            rss_enabled = os.environ.get("RSS_FEEDS_ENABLED", "false").lower() == "true"
+            if rss_enabled:
+                from sfc.autonomous.source_provider import get_source_registry
+                items = await get_source_registry().get_all_items()
+                source_label = "registry"
+            else:
+                items = await self._source.get_items()
+                source_label = self._source.name
+            logger.info("[Loop] Cycle start — source=%s total_items=%d", source_label, len(items))
 
-            # 2. Dedup filter
-            fresh = [i for i in items if not self._dedup.is_seen(i.get("headline", ""))]
+            # 2. Dedup filter (headline + URL)
+            fresh = []
+            for i in items:
+                headline = i.get("headline", "")
+                source_url = i.get("source_url", "")
+                if self._dedup.is_seen(headline):
+                    continue
+                if source_url and self._dedup.is_url_seen(source_url):
+                    continue
+                fresh.append(i)
             deduped_count = len(items) - len(fresh)
             self._metrics.items_deduped += deduped_count
             logger.info(
@@ -80,11 +95,14 @@ class AutonomousLoop:
                 logger.info("[Loop] No new items — cycle complete")
                 return result
 
-            # 3. Pick item and 4. mark seen immediately
+            # 3. Pick item and 4. mark seen immediately (headline + URL)
             item = self._pick_item(fresh)
             headline = item.get("headline", "")
+            source_url = item.get("source_url", "")
             result["headline"] = headline[:200]
             self._dedup.mark_seen(headline)
+            if source_url:
+                self._dedup.mark_url_seen(source_url)
 
             # 5. Choose workflow mode
             from sfc.orchestration.master_state import WorkflowType

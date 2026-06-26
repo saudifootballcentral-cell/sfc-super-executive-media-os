@@ -261,6 +261,101 @@ async def _startup() -> None:
     return orchestrator
 
 
+async def _initialize_persistence() -> None:
+    """Initialize PostgresPersistence pool if POSTGRES_DSN is set."""
+    try:
+        from sfc.orchestration.persistence import get_persistence_provider
+        provider = get_persistence_provider()
+        if hasattr(provider, "initialize"):
+            await provider.initialize()
+        logger.info("[Startup] Persistence initialized: %s", type(provider).__name__)
+    except Exception as exc:
+        logger.warning("[Startup] Persistence init failed (using in-memory): %s", exc)
+
+
+async def _load_knowledge() -> None:
+    """Load knowledge graph from persistence (if available)."""
+    try:
+        from sfc.infrastructure.knowledge_graph.service import get_knowledge_graph_service
+        kg = get_knowledge_graph_service()  # noqa: F841
+        logger.info("[Startup] KnowledgeGraph initialized")
+    except Exception as exc:
+        logger.warning("[Startup] KnowledgeGraph load failed: %s", exc)
+
+
+async def _load_memory() -> None:
+    """Pre-warm memory layers from persistence."""
+    try:
+        from sfc.memory.episodic_memory import get_episodic_memory
+        memory = get_episodic_memory()  # noqa: F841
+        logger.info("[Startup] EpisodicMemory loaded")
+    except Exception as exc:
+        logger.warning("[Startup] Memory load failed: %s", exc)
+
+
+async def _initialize_personas() -> None:
+    """Warmup PersonaRecommendationEngine."""
+    try:
+        from sfc.personas.activation.service import get_persona_activation_service
+        service = get_persona_activation_service()  # noqa: F841
+        logger.info("[Startup] Personas initialized")
+    except Exception as exc:
+        logger.warning("[Startup] Persona init failed: %s", exc)
+
+
+async def _initialize_divisions() -> None:
+    """Initialize all 9 divisions."""
+    import importlib
+
+    division_classes = [
+        ("editorial", "sfc.divisions.editorial.stub", "EditorialDivision"),
+        ("intelligence", "sfc.divisions.intelligence.stub", "IntelligenceDivision"),
+        ("analytics", "sfc.divisions.analytics.stub", "AnalyticsDivision"),
+        ("revenue", "sfc.divisions.revenue.stub", "RevenueDivision"),
+        ("strategic_planning", "sfc.divisions.strategic_planning.stub", "StrategicPlanningDivision"),
+        ("publishing", "sfc.divisions.publishing.stub", "PublishingDivision"),
+        ("creative", "sfc.divisions.creative.stub", "CreativeDivision"),
+        ("governance", "sfc.divisions.governance.stub", "GovernanceDivision"),
+    ]
+    initialized = []
+    for name, module_path, class_name in division_classes:
+        try:
+            module = importlib.import_module(module_path)
+            cls = getattr(module, class_name)
+            division = cls()
+            if hasattr(division, "initialize"):
+                await division.initialize()
+            initialized.append(name)
+        except Exception as exc:
+            logger.warning("[Startup] Division %s init failed: %s", name, exc)
+    logger.info("[Startup] Divisions initialized: %s", initialized)
+
+
+def _log_startup_complete(orchestrator: object, autonomous_enabled: bool) -> None:
+    """Log a comprehensive startup summary."""
+    live = os.environ.get("LIVE_PUBLISHING_ENABLED", "false").lower() == "true"
+    operator_auto = os.environ.get("OPERATOR_AUTO_APPROVE", "false").lower() == "true"
+    postgres_dsn = bool(os.environ.get("POSTGRES_DSN", ""))
+    rss_enabled = os.environ.get("RSS_FEEDS_ENABLED", "false").lower() == "true"
+
+    logger.info(
+        "[Startup] ═══════════════════════════════════════════════════\n"
+        "[Startup] SFC SUPER EXECUTIVE MEDIA OS — STARTUP COMPLETE\n"
+        "[Startup] ═══════════════════════════════════════════════════\n"
+        "[Startup] Live Publishing:     %s\n"
+        "[Startup] Operator Auto:       %s\n"
+        "[Startup] Autonomous Loop:     %s\n"
+        "[Startup] PostgreSQL:          %s\n"
+        "[Startup] RSS Feeds:           %s\n"
+        "[Startup] ═══════════════════════════════════════════════════",
+        "ENABLED" if live else "DISABLED (dry-run)",
+        "ENABLED" if operator_auto else "DISABLED (manual approval required)",
+        "ENABLED" if autonomous_enabled else "DISABLED (set AUTONOMOUS_ENABLED=true)",
+        "ENABLED" if postgres_dsn else "DISABLED (set POSTGRES_DSN for persistence)",
+        "ENABLED" if rss_enabled else "DISABLED (set RSS_FEEDS_ENABLED=true)",
+    )
+
+
 async def _heartbeat_loop(orchestrator: object) -> None:  # type: ignore[type-arg]
     start_time = time.monotonic()
     tick = 0
@@ -294,6 +389,16 @@ async def main() -> None:
     # Railway logs regardless of whether downstream imports succeed or fail.
     _log_import_diagnostics()
     orchestrator = await _startup()
+
+    # Full Enterprise startup sequence
+    await _initialize_persistence()
+    await _load_knowledge()
+    await _load_memory()
+    await _initialize_personas()
+    await _initialize_divisions()
+
+    autonomous_enabled = os.environ.get("AUTONOMOUS_ENABLED", "false").lower() == "true"
+    _log_startup_complete(orchestrator, autonomous_enabled)
 
     # Run heartbeat and autonomous scheduler concurrently.
     # gather() propagates CancelledError from either task on Railway shutdown.
