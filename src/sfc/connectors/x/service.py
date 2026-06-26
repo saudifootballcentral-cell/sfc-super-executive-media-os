@@ -1,10 +1,16 @@
-"""X (Twitter) API connector service — all calls mocked, credentials from env."""
+"""X (Twitter) API connector service — real API when credentials present, mock otherwise."""
 
 from __future__ import annotations
 
 import asyncio
+import base64
+import hashlib
+import hmac
 import logging
 import os
+import time
+import urllib.parse
+import uuid
 from datetime import datetime
 from typing import Any
 
@@ -68,6 +74,79 @@ class XService:
     # Publishing
     # ------------------------------------------------------------------
 
+    def _is_live(self) -> bool:
+        return all([self._api_key, self._api_secret, self._access_token, self._access_secret])
+
+    def _oauth1_header(self, method: str, url: str) -> str:
+        """Build OAuth 1.0a HMAC-SHA1 Authorization header for X API v2."""
+        oauth_params: dict[str, str] = {
+            "oauth_consumer_key": self._api_key,
+            "oauth_nonce": uuid.uuid4().hex,
+            "oauth_signature_method": "HMAC-SHA1",
+            "oauth_timestamp": str(int(time.time())),
+            "oauth_token": self._access_token,
+            "oauth_version": "1.0",
+        }
+        param_string = "&".join(
+            f"{urllib.parse.quote(k, safe='')}={urllib.parse.quote(v, safe='')}"
+            for k, v in sorted(oauth_params.items())
+        )
+        base_string = "&".join([
+            method.upper(),
+            urllib.parse.quote(url, safe=""),
+            urllib.parse.quote(param_string, safe=""),
+        ])
+        signing_key = (
+            f"{urllib.parse.quote(self._api_secret, safe='')}"
+            f"&{urllib.parse.quote(self._access_secret, safe='')}"
+        )
+        signature = base64.b64encode(
+            hmac.new(signing_key.encode(), base_string.encode(), hashlib.sha1).digest()
+        ).decode()
+        oauth_params["oauth_signature"] = signature
+        header_parts = ", ".join(
+            f'{urllib.parse.quote(k, safe="")}="{urllib.parse.quote(v, safe="")}"'
+            for k, v in sorted(oauth_params.items())
+        )
+        return f"OAuth {header_parts}"
+
+    async def _real_create_post(
+        self, text: str, media_ids: list[str] | None = None, reply_to_id: str = ""
+    ) -> XPost:
+        """Real X API v2 POST /2/tweets call."""
+        import httpx
+
+        url = "https://api.twitter.com/2/tweets"
+        body: dict[str, Any] = {"text": text}
+        if reply_to_id:
+            body["reply"] = {"in_reply_to_tweet_id": reply_to_id}
+        if media_ids:
+            body["media"] = {"media_ids": media_ids}
+
+        headers = {
+            "Authorization": self._oauth1_header("POST", url),
+            "Content-Type": "application/json",
+        }
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(url, json=body, headers=headers, timeout=30.0)
+            resp.raise_for_status()
+            data = resp.json()
+
+        tweet_id = data["data"]["id"]
+        post = XPost(
+            text=text,
+            media_ids=media_ids or [],
+            platform_post_id=tweet_id,
+            status=XPostStatus.PUBLISHED,
+            published_at=datetime.utcnow(),
+            url=f"https://x.com/i/web/status/{tweet_id}",
+            reply_to_id=reply_to_id,
+        )
+        self._post_history.append(post)
+        self._observability.record_success(latency_ms=0.0)
+        logger.info("[X] LIVE post published | id=%s chars=%d", tweet_id, len(text))
+        return post
+
     async def create_post(
         self,
         text: str,
@@ -76,6 +155,8 @@ class XService:
     ) -> XPost:
         try:
             self._validate_text(text)
+            if self._is_live():
+                return await self._real_create_post(text, media_ids, reply_to_id)
             self._post_counter += 1
             platform_id = f"x_{_POST_ID_COUNTER + self._post_counter}"
             post = XPost(
@@ -89,7 +170,7 @@ class XService:
             )
             self._post_history.append(post)
             self._observability.record_success(latency_ms=220.0)
-            logger.info("[X] Post published | id=%s chars=%d", platform_id, len(text))
+            logger.info("[X] Mock post | id=%s chars=%d", platform_id, len(text))
             return post
         except Exception as exc:
             self._observability.record_failure(str(exc))
