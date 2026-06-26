@@ -20,7 +20,7 @@ import httpx
 
 logger = logging.getLogger("sfc.connectors.buffer.graphql_client")
 
-_BUFFER_GRAPHQL_URL = "https://api.buffer.com"
+_BUFFER_GRAPHQL_URL = "https://api.buffer.com/graphql"
 _DEFAULT_TIMEOUT = 30.0
 
 # ---------------------------------------------------------------------------
@@ -60,20 +60,15 @@ query SFCWhoAmIAlt {
 # Publish mutation — creates a post via the new Buffer API
 # ---------------------------------------------------------------------------
 _MUTATION_CREATE_POST = """
-mutation SFCCreatePost($channelId: String!, $text: String!, $scheduledAt: String) {
+mutation SFCCreatePost($channelId: String!, $text: String!) {
   createPost(input: {
     channelId: $channelId
     text: $text
-    scheduledAt: $scheduledAt
   }) {
     post {
       id
-      status
-      text
-      scheduledAt
     }
-    error {
-      type
+    errors {
       message
     }
   }
@@ -215,19 +210,20 @@ class BufferGraphQLClient:
         if not self._live:
             dry_id = f"dry_gql_{channel_id[:8]}"
             logger.debug("[BufferGraphQL][DRY-RUN] create_post skipped — dry_id=%s", dry_id)
-            return {"id": dry_id, "status": "scheduled", "dry_run": True}
+            return {"id": dry_id, "dry_run": True}
 
         variables: dict[str, Any] = {"channelId": channel_id, "text": text}
-        if scheduled_at is not None:
-            variables["scheduledAt"] = scheduled_at
+        # scheduledAt omitted — always publish immediately
 
         data = await self.query(_MUTATION_CREATE_POST, variables)
         result = data.get("createPost", {})
 
-        error = result.get("error")
-        if error and error.get("message"):
+        # Buffer returns errors as a list (plural)
+        errors = result.get("errors") or []
+        if errors:
+            messages = "; ".join(e.get("message", str(e)) for e in errors)
             raise BufferGraphQLError(
-                f"Buffer createPost error: {error['message']} (type={error.get('type', '?')})",
+                f"Buffer createPost errors: {messages}",
                 status_code=200,
                 permanent=True,
             )
@@ -269,7 +265,7 @@ class BufferGraphQLClient:
     # ------------------------------------------------------------------
 
     def _handle_response(self, resp: httpx.Response) -> dict[str, Any]:
-        if resp.status_code in (401, 403):
+        if resp.status_code in (400, 401, 403):
             msg = self._extract_error(resp)
             raise BufferGraphQLError(msg, status_code=resp.status_code, permanent=True)
         if resp.status_code >= 500:
