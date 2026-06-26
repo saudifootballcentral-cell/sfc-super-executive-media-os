@@ -228,6 +228,20 @@ async def _anthropic_health_check() -> None:
         logger.warning("Anthropic health check: unreachable — %s", exc)
 
 
+def _check_autonomous() -> bool:
+    enabled = os.environ.get("AUTONOMOUS_ENABLED", "false").lower() == "true"
+    interval = os.environ.get("AUTONOMOUS_SCAN_INTERVAL_MINUTES", "30")
+    dedup = os.environ.get("DEDUP_WINDOW_HOURS", "24")
+    if enabled:
+        logger.info(
+            "AUTONOMOUS_ENABLED=true — autonomous loop active (interval=%smin dedup_window=%sh)",
+            interval, dedup,
+        )
+    else:
+        logger.info("AUTONOMOUS_ENABLED=false — autonomous loop disabled (set to 'true' to activate)")
+    return enabled
+
+
 async def _startup() -> None:
     logger.info("=== SFC Super Executive Media OS — Railway Worker Starting ===")
 
@@ -235,6 +249,7 @@ async def _startup() -> None:
     _verify_imports()
     _log_env_diagnostics()
     live = _check_live_publishing()
+    _check_autonomous()
     await _anthropic_health_check()
 
     # Import only after _verify_imports() has confirmed the package is present.
@@ -256,12 +271,36 @@ async def _heartbeat_loop(orchestrator: object) -> None:  # type: ignore[type-ar
         logger.info("Heartbeat tick=%d uptime=%ds worker=alive", tick, uptime)
 
 
+async def _autonomous_scheduler_task() -> None:
+    """Run the AutonomousScheduler as a long-lived asyncio task.
+
+    If AUTONOMOUS_ENABLED=false, this task exits immediately after logging.
+    Exceptions inside cycles are caught by AutonomousScheduler.run() — this
+    task only terminates on asyncio.CancelledError (Railway shutdown).
+    """
+    try:
+        from sfc.autonomous.scheduler import AutonomousScheduler
+        scheduler = AutonomousScheduler()
+        await scheduler.run()
+    except asyncio.CancelledError:
+        logger.info("[AutonomousScheduler] Task cancelled — exiting cleanly")
+        raise
+    except Exception as exc:
+        logger.error("[AutonomousScheduler] Fatal error — task exiting: %s", exc, exc_info=True)
+
+
 async def main() -> None:
     # Diagnostics run before any SFC business logic — guaranteed to appear in
     # Railway logs regardless of whether downstream imports succeed or fail.
     _log_import_diagnostics()
     orchestrator = await _startup()
-    await _heartbeat_loop(orchestrator)
+
+    # Run heartbeat and autonomous scheduler concurrently.
+    # gather() propagates CancelledError from either task on Railway shutdown.
+    await asyncio.gather(
+        _heartbeat_loop(orchestrator),
+        _autonomous_scheduler_task(),
+    )
 
 
 if __name__ == "__main__":
