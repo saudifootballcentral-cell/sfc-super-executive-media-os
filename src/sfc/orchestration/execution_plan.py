@@ -98,7 +98,7 @@ _ANALYTICS = ExecutionStage(
 
 _REPORTING = ExecutionStage(
     name="reporting",
-    graph="builtin",
+    graph="autonomous_graph",
     required=False,
     depends_on=["analytics"],
     timeout_seconds=120.0,
