@@ -90,6 +90,24 @@ async def _call_via_gateway(state: SFCState) -> dict[str, Any] | None:
             indent=2,
         )
 
+        # Load recent lessons for context
+        historical_context = ""
+        try:
+            from sfc.orchestration.persistence import get_persistence_provider
+            provider = get_persistence_provider()
+            if hasattr(provider, "get_recent_learning"):
+                recent = await provider.get_recent_learning(
+                    task_type=state.get("task_type", ""), limit=3
+                )
+                if recent:
+                    historical_context = "\n\nRecent lessons from previous cycles:\n" + "\n".join(
+                        f"- {lesson}"
+                        for r in recent
+                        for lesson in r.get("lessons", [])[:2]
+                    )
+        except Exception:
+            pass
+
         request = ModelRequest(
             task_type="executive",
             system_prompt=system_prompt,
@@ -109,6 +127,7 @@ async def _call_via_gateway(state: SFCState) -> dict[str, Any] | None:
                 '  "estimated_reach": <integer>,\n'
                 '  "revenue_opportunity": <true|false>\n'
                 "}"
+                + historical_context
             ),
             max_tokens=1024,
             temperature=0.3,

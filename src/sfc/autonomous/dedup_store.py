@@ -47,3 +47,54 @@ class DedupStore:
     def size(self) -> int:
         self._evict()
         return len(self._store)
+
+    # ------------------------------------------------------------------
+    # URL deduplication
+    # ------------------------------------------------------------------
+
+    def is_url_seen(self, url: str) -> bool:
+        """Dedup by URL (exact match after normalization)."""
+        normalized = url.strip().lower().rstrip("/")
+        fp = hashlib.sha256(f"url:{normalized}".encode()).hexdigest()
+        self._evict()
+        return fp in self._store
+
+    def mark_url_seen(self, url: str) -> None:
+        """Mark a URL as seen for the dedup window."""
+        normalized = url.strip().lower().rstrip("/")
+        fp = hashlib.sha256(f"url:{normalized}".encode()).hexdigest()
+        self._store[fp] = time.monotonic() + self._window_seconds
+
+    # ------------------------------------------------------------------
+    # Content-hash deduplication (detects same story rewritten)
+    # ------------------------------------------------------------------
+
+    def is_content_seen(self, content: str) -> bool:
+        """Dedup by content hash using first 500 normalized chars."""
+        normalized = " ".join(content.strip().lower().split())[:500]
+        fp = hashlib.sha256(f"content:{normalized}".encode()).hexdigest()
+        self._evict()
+        return fp in self._store
+
+    def mark_content_seen(self, content: str) -> None:
+        """Mark content as seen for the dedup window."""
+        normalized = " ".join(content.strip().lower().split())[:500]
+        fp = hashlib.sha256(f"content:{normalized}".encode()).hexdigest()
+        self._store[fp] = time.monotonic() + self._window_seconds
+
+    # ------------------------------------------------------------------
+    # Platform-level deduplication (headline + platform combination)
+    # ------------------------------------------------------------------
+
+    def is_platform_seen(self, headline: str, platform: str) -> bool:
+        """Dedup by headline + platform combination."""
+        combined = f"platform:{platform}:{headline.strip().lower()}"
+        fp = hashlib.sha256(combined.encode()).hexdigest()
+        self._evict()
+        return fp in self._store
+
+    def mark_platform_seen(self, headline: str, platform: str) -> None:
+        """Mark a headline+platform pair as seen for the dedup window."""
+        combined = f"platform:{platform}:{headline.strip().lower()}"
+        fp = hashlib.sha256(combined.encode()).hexdigest()
+        self._store[fp] = time.monotonic() + self._window_seconds
