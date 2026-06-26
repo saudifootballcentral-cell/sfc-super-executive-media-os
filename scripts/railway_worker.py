@@ -337,6 +337,8 @@ def _log_startup_complete(orchestrator: object, autonomous_enabled: bool) -> Non
     operator_auto = os.environ.get("OPERATOR_AUTO_APPROVE", "false").lower() == "true"
     postgres_dsn = bool(os.environ.get("POSTGRES_DSN", ""))
     rss_enabled = os.environ.get("RSS_FEEDS_ENABLED", "false").lower() == "true"
+    footage_discovery = os.environ.get("FOOTAGE_DISCOVERY_ENABLED", "false").lower() == "true"
+    video_processing = os.environ.get("VIDEO_PROCESSING_ENABLED", "false").lower() == "true"
 
     logger.info(
         "[Startup] ═══════════════════════════════════════════════════\n"
@@ -347,12 +349,16 @@ def _log_startup_complete(orchestrator: object, autonomous_enabled: bool) -> Non
         "[Startup] Autonomous Loop:     %s\n"
         "[Startup] PostgreSQL:          %s\n"
         "[Startup] RSS Feeds:           %s\n"
+        "[Startup] Footage Discovery:   %s\n"
+        "[Startup] Video Processing:    %s\n"
         "[Startup] ═══════════════════════════════════════════════════",
         "ENABLED" if live else "DISABLED (dry-run)",
         "ENABLED" if operator_auto else "DISABLED (manual approval required)",
         "ENABLED" if autonomous_enabled else "DISABLED (set AUTONOMOUS_ENABLED=true)",
         "ENABLED" if postgres_dsn else "DISABLED (set POSTGRES_DSN for persistence)",
         "ENABLED" if rss_enabled else "DISABLED (set RSS_FEEDS_ENABLED=true)",
+        "ENABLED" if footage_discovery else "DISABLED (set FOOTAGE_DISCOVERY_ENABLED=true)",
+        "ENABLED" if video_processing else "DISABLED (set VIDEO_PROCESSING_ENABLED=true)",
     )
 
 
@@ -384,6 +390,22 @@ async def _autonomous_scheduler_task() -> None:
         logger.error("[AutonomousScheduler] Fatal error — task exiting: %s", exc, exc_info=True)
 
 
+async def _footage_discovery_task() -> None:
+    """Run the FootageDiscoveryScheduler as a long-lived asyncio task.
+
+    If FOOTAGE_DISCOVERY_ENABLED=false, this task exits immediately after logging.
+    """
+    try:
+        from sfc.video_intelligence.discovery.scheduler import FootageDiscoveryScheduler
+        scheduler = FootageDiscoveryScheduler()
+        await scheduler.run()
+    except asyncio.CancelledError:
+        logger.info("[FootageDiscoveryScheduler] Task cancelled — exiting cleanly")
+        raise
+    except Exception as exc:
+        logger.error("[FootageDiscoveryScheduler] Fatal error — task exiting: %s", exc, exc_info=True)
+
+
 async def main() -> None:
     # Diagnostics run before any SFC business logic — guaranteed to appear in
     # Railway logs regardless of whether downstream imports succeed or fail.
@@ -400,11 +422,12 @@ async def main() -> None:
     autonomous_enabled = os.environ.get("AUTONOMOUS_ENABLED", "false").lower() == "true"
     _log_startup_complete(orchestrator, autonomous_enabled)
 
-    # Run heartbeat and autonomous scheduler concurrently.
-    # gather() propagates CancelledError from either task on Railway shutdown.
+    # Run heartbeat, autonomous scheduler, and footage discovery concurrently.
+    # gather() propagates CancelledError from any task on Railway shutdown.
     await asyncio.gather(
         _heartbeat_loop(orchestrator),
         _autonomous_scheduler_task(),
+        _footage_discovery_task(),
     )
 
 

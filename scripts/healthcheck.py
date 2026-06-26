@@ -57,4 +57,12 @@ try:
 except Exception as exc:
     fail(f"video_intelligence import raised: {exc}")
 
+# Footage Discovery
+try:
+    from sfc.video_intelligence.discovery.service import get_footage_discovery_service
+    get_footage_discovery_service()
+    ok("footage_discovery")
+except Exception as exc:
+    fail(f"footage_discovery import raised: {exc}")
+
 print("healthy")

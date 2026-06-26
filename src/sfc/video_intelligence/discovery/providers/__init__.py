@@ -1,0 +1,1 @@
+"""Footage discovery providers."""

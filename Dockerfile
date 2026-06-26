@@ -96,6 +96,7 @@ RUN mkdir -p \
     artifacts/analytics_sync \
     artifacts/video/clips/rendered \
     artifacts/video/clips/subtitles \
+    artifacts/video/downloads \
     && chown -R sfc:sfc /app/artifacts
 
 # Switch to non-root user
