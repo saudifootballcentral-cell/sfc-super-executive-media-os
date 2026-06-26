@@ -94,7 +94,7 @@ _print_runtime_diagnostics()
 # Increment this whenever Phase V gate logic changes.
 # ---------------------------------------------------------------------------
 
-_SCRIPT_VERSION = "3.2.0-phase-vi-graphql-publisher"
+_SCRIPT_VERSION = "3.3.0-graphql-routing-confirmed"
 print(f"[SFC-GOLIVE] production_go_live.py version={_SCRIPT_VERSION}", flush=True)
 
 # ---------------------------------------------------------------------------
@@ -998,6 +998,15 @@ async def phase_vi_publish(report: GoLiveReport, phase_i: PhaseResult, phase_iii
             platform=BufferPlatform.X,
             hashtags=["AlHilal", "AFCChampionsLeague", "SaudiFootball", "SFC"],
         )
+
+        # Diagnose routing BEFORE the call so it's visible regardless of outcome
+        from sfc.connectors.buffer.graphql_client import BufferGraphQLClient as _GQL
+        _tok = os.environ.get("BUFFER_ACCESS_TOKEN", "")
+        _is_api_key = _GQL.is_api_key(_tok)
+        _tok_hint = f"{_tok[:6]}…{_tok[-4:]}" if len(_tok) > 10 else "(short)"
+        _print(f"  Token hint: {_tok_hint}  is_api_key={_is_api_key}")
+        _print(f"  API route: {'GraphQL (api.buffer.com)' if _is_api_key else 'REST (api.bufferapp.com/1)'}")
+        _print(f"  Script version: {_SCRIPT_VERSION}")
 
         _print(f"  Post content: {post_content[:80]}…")
         _print(f"  Post ID: {production_post.post_id[:8]}…")

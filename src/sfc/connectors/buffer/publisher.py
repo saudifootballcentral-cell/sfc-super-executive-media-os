@@ -142,7 +142,13 @@ class BufferPublisher:
         """Route to GraphQL (API Key tokens) or REST (legacy OAuth tokens)."""
         from sfc.connectors.buffer.graphql_client import BufferGraphQLClient
         token = os.environ.get("BUFFER_ACCESS_TOKEN", "")
-        if BufferGraphQLClient.is_api_key(token):
+        is_api_key = BufferGraphQLClient.is_api_key(token)
+        token_hint = f"{token[:6]}...{token[-4:]}" if len(token) > 10 else "(short)"
+        logger.info(
+            "[Publisher] Routing: is_api_key=%s token_hint=%s → %s",
+            is_api_key, token_hint, "GraphQL" if is_api_key else "REST",
+        )
+        if is_api_key:
             return await self._call_graphql_create_post(post, profile_id)
         return await self._call_rest_create_update(post, profile_id)
 
