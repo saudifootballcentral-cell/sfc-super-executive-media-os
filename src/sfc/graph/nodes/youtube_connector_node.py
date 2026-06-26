@@ -77,7 +77,28 @@ async def youtube_connector_node(state: dict[str, Any]) -> dict[str, Any]:
                 logger.warning("[YouTube Connector] Buffer fallback failed: %s", buf_exc)
 
         else:
-            logger.info("[YouTube Connector] No YouTube or Buffer credentials — skipping publish")
+            # No real credentials — use mock service so pipeline keeps flowing
+            route_used = "mock"
+            for pkg in yt_packages[:5]:
+                is_short = pkg.get("package_type") == "youtube_short"
+                req = VideoUploadRequest(
+                    title=pkg.get("title", "SFC Video"),
+                    description=pkg.get("description", ""),
+                    tags=pkg.get("hashtags", []),
+                    category=VideoCategory.SPORTS,
+                    privacy=VideoPrivacy.PUBLIC,
+                    file_url=pkg.get("media_assets", [{}])[0].get("file_url", "") if pkg.get("media_assets") else "",
+                    thumbnail_url=pkg.get("thumbnail_url", ""),
+                    is_short=is_short,
+                    language="ar",
+                )
+                if is_short:
+                    result = await service.upload_short(req)
+                else:
+                    result = await service.upload_video(req)
+                d = result.to_dict()
+                d["route_used"] = "mock"
+                publish_results.append(d)
 
         channel_metrics = await service.get_channel_metrics()
         report = await service.generate_report()

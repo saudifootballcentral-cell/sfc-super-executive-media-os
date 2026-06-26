@@ -65,7 +65,18 @@ async def x_connector_node(state: dict[str, Any]) -> dict[str, Any]:
                 logger.warning("[X Connector] Buffer fallback failed: %s", buf_exc)
 
         else:
-            logger.info("[X Connector] No X or Buffer credentials — skipping publish")
+            # No real credentials — use mock service so pipeline keeps flowing
+            route_used = "mock"
+            for pkg in x_packages[:3]:
+                caption = pkg.get("caption", "") or pkg.get("title", "")
+                hashtags = pkg.get("hashtags", [])
+                if hashtags:
+                    caption = f"{caption}\n\n{' '.join(hashtags[:5])}"
+                caption = caption[:280]
+                post = await service.create_post(text=caption)
+                result = post.to_dict()
+                result["route_used"] = "mock"
+                publish_results.append(result)
 
         # Social intelligence feed (always runs)
         trends = await service.get_trending_topics()
