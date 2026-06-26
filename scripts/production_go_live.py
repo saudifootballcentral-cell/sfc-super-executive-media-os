@@ -94,7 +94,7 @@ _print_runtime_diagnostics()
 # Increment this whenever Phase V gate logic changes.
 # ---------------------------------------------------------------------------
 
-_SCRIPT_VERSION = "3.1.0-phase-vi-fresh-client"
+_SCRIPT_VERSION = "3.2.0-phase-vi-graphql-publisher"
 print(f"[SFC-GOLIVE] production_go_live.py version={_SCRIPT_VERSION}", flush=True)
 
 # ---------------------------------------------------------------------------
