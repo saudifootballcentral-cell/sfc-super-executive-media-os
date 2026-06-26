@@ -51,6 +51,8 @@ except Exception as exc:
 try:
     from sfc.video_intelligence.clipping.service import SmartClippingEngine
     from sfc.video_intelligence.ingestion.service import VideoIngestionService
+    from sfc.video_intelligence.rendering.service import get_video_rendering_service
+    get_video_rendering_service()
     ok("video_intelligence")
 except Exception as exc:
     fail(f"video_intelligence import raised: {exc}")

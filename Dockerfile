@@ -94,6 +94,8 @@ RUN mkdir -p \
     artifacts/creative \
     artifacts/video_intelligence \
     artifacts/analytics_sync \
+    artifacts/video/clips/rendered \
+    artifacts/video/clips/subtitles \
     && chown -R sfc:sfc /app/artifacts
 
 # Switch to non-root user
