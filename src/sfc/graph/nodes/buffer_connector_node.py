@@ -1,4 +1,9 @@
-"""LangGraph node — Buffer API Connector (multi-platform hub)."""
+"""LangGraph node — Buffer API Connector (multi-platform hub).
+
+Routes content packages through Buffer for managed platforms, and also
+tries to route non-Buffer platforms (telegram, discord, etc.) through
+their direct connectors via the PublisherRouter.
+"""
 
 from __future__ import annotations
 
@@ -7,9 +12,19 @@ from typing import Any
 
 logger = logging.getLogger("sfc.graph.nodes.buffer_connector")
 
+# Platforms that Buffer does NOT handle — routed to direct connectors
+_DIRECT_ONLY_PLATFORMS = {
+    "telegram", "discord", "pinterest", "reddit",
+    "medium", "wordpress", "email", "whatsapp",
+}
+
 
 async def buffer_connector_node(state: dict[str, Any]) -> dict[str, Any]:
-    """Route content packages through Buffer to Instagram, Threads, Facebook, TikTok."""
+    """Route content packages through Buffer to Instagram, Threads, Facebook, TikTok.
+
+    Additionally, tries to publish to direct-only platforms (Telegram, Discord, etc.)
+    via the PublisherRouter if content has those platforms listed.
+    """
     try:
         from sfc.connectors.buffer.service import get_buffer_service
 
@@ -28,12 +43,39 @@ async def buffer_connector_node(state: dict[str, Any]) -> dict[str, Any]:
             results = await service.publish_content_package(pkg)
             all_results.extend([r.to_dict() for r in results])
 
+        # Route direct-only platforms through PublisherRouter
+        direct_results: list[dict[str, Any]] = []
+        try:
+            from sfc.connectors.routing.publisher_router import get_publisher_router
+            router = get_publisher_router()
+
+            for pkg in content_packages:
+                platforms = pkg.get("platforms", [])
+                direct_platforms = [p for p in platforms if p in _DIRECT_ONLY_PLATFORMS]
+                if not direct_platforms:
+                    continue
+
+                body = pkg.get("caption", "") or pkg.get("title", "") or pkg.get("body", "")
+                media_url = pkg.get("media_url", "")
+
+                for platform in direct_platforms:
+                    pub_result = await router.publish(
+                        platform=platform,
+                        text=body,
+                        media_url=media_url,
+                    )
+                    direct_results.append(pub_result.to_dict())
+
+        except Exception as router_exc:
+            logger.debug("[Buffer Connector] Router integration error: %s", router_exc)
+
         queue = await service.get_queue()
         report = await service.generate_report()
 
         return {
             "buffer_queue_state": {
                 "publish_results": all_results,
+                "direct_platform_results": direct_results,
                 "queue": queue.to_dict(),
                 "report": report.to_dict(),
                 "observability": service.observability.to_dict(),

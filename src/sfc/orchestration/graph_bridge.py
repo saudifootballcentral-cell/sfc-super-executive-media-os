@@ -55,6 +55,12 @@ class GraphBridge:
             self._graphs["publishing_connectors_graph"] = build_publishing_connectors_graph()
         return self._graphs["publishing_connectors_graph"]
 
+    def _get_autonomous_graph(self) -> Any:
+        if "autonomous_graph" not in self._graphs:
+            from sfc.graph.autonomous_graph import build_autonomous_graph
+            self._graphs["autonomous_graph"] = build_autonomous_graph()
+        return self._graphs["autonomous_graph"]
+
     # ------------------------------------------------------------------
     # Core execute method
     # ------------------------------------------------------------------
@@ -108,6 +114,7 @@ class GraphBridge:
             "social_intelligence_graph": self._get_social_intelligence_graph,
             "creative_production_graph": self._get_creative_production_graph,
             "publishing_connectors_graph": self._get_publishing_connectors_graph,
+            "autonomous_graph": self._get_autonomous_graph,
         }
         loader = loaders.get(name)
         if loader is None:
