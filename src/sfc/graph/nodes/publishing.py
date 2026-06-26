@@ -88,12 +88,24 @@ async def publishing_node(state: SFCState) -> dict[str, Any]:
 
         publish_queue: list[dict[str, Any]] = []
         platform_results: dict[str, list[dict[str, Any]]] = {}
+        router_publish_results: list[dict[str, Any]] = []
+
+        # Try PublisherRouter for real routing (direct API or Buffer)
+        try:
+            from sfc.connectors.routing.publisher_router import get_publisher_router
+            router = get_publisher_router()
+            _router_available = True
+        except Exception as _router_exc:
+            logger.debug("[Publishing] PublisherRouter not available: %s", _router_exc)
+            _router_available = False
 
         for content in approved_content:
             platforms = content.get("platforms", [])
+            body = content.get("body", "")
+            media_url = content.get("media_url", "")
+
             for platform in platforms:
                 constraints = _PLATFORM_CONSTRAINTS.get(platform, {})
-                body = content.get("body", "")
                 max_chars = constraints.get("max_chars", 280)
 
                 job = {
@@ -107,6 +119,25 @@ async def publishing_node(state: SFCState) -> dict[str, Any]:
                     "status": "queued",
                     "queued_at": datetime.utcnow().isoformat(),
                 }
+
+                # Use PublisherRouter when available
+                if _router_available:
+                    import asyncio
+                    try:
+                        pub_result = await router.publish(
+                            platform=platform,
+                            text=body[:max_chars],
+                            media_url=media_url,
+                        )
+                        job["status"] = "published" if pub_result.success else "failed"
+                        job["route_used"] = pub_result.route_used
+                        job["post_id"] = pub_result.post_id
+                        job["post_url"] = pub_result.url
+                        router_publish_results.append(pub_result.to_dict())
+                    except Exception as _pub_exc:
+                        logger.debug("[Publishing] Router publish error: %s", _pub_exc)
+                        job["status"] = "queued"
+
                 publish_queue.append(job)
 
                 if platform not in platform_results:
@@ -114,11 +145,11 @@ async def publishing_node(state: SFCState) -> dict[str, Any]:
                 platform_results[platform].append({
                     "job_id": job["job_id"],
                     "content_id": content.get("content_id"),
-                    "status": "queued",
+                    "status": job["status"],
                 })
 
         logger.info(
-            "[Publishing] %d job(s) queued across %d platform(s)",
+            "[Publishing] %d job(s) queued/published across %d platform(s)",
             len(publish_queue),
             len(platform_results),
         )
@@ -130,7 +161,8 @@ async def publishing_node(state: SFCState) -> dict[str, Any]:
                 "job_count": len(publish_queue),
                 "rejected_count": rejected_count,
                 "platform_results": platform_results,
-                "status": "queued",
+                "router_results": router_publish_results,
+                "status": "published" if router_publish_results else "queued",
                 "completed_at": datetime.utcnow().isoformat(),
             },
             "pipeline_stage": "publishing_complete",

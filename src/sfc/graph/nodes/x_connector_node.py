@@ -1,15 +1,25 @@
-"""LangGraph node — X API Connector (publishing + social intelligence feed)."""
+"""LangGraph node — X API Connector (publishing + social intelligence feed).
+
+Dual-path: uses XService (direct) when X_API_KEY is set, otherwise falls back to Buffer.
+"""
 
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 logger = logging.getLogger("sfc.graph.nodes.x_connector")
 
 
 async def x_connector_node(state: dict[str, Any]) -> dict[str, Any]:
-    """Publish X-eligible content, monitor trends, and feed social intelligence."""
+    """Publish X-eligible content, monitor trends, and feed social intelligence.
+
+    Routing:
+      - X_API_KEY present → XService (direct)
+      - BUFFER_ACCESS_TOKEN present → Buffer
+      - Neither → skip publishing, still run trends/intelligence
+    """
     try:
         from sfc.connectors.x.service import get_x_service
 
@@ -23,16 +33,41 @@ async def x_connector_node(state: dict[str, Any]) -> dict[str, Any]:
         ]
 
         publish_results: list[dict[str, Any]] = []
-        for pkg in x_packages[:3]:
-            caption = pkg.get("caption", "") or pkg.get("title", "")
-            hashtags = pkg.get("hashtags", [])
-            if hashtags:
-                caption = f"{caption}\n\n{' '.join(hashtags[:5])}"
-            caption = caption[:280]
-            post = await service.create_post(text=caption)
-            publish_results.append(post.to_dict())
+        route_used = "skipped"
 
-        # Social intelligence feed (runs every cycle regardless of publishing)
+        # --- Direct API path ---
+        if os.environ.get("X_API_KEY", ""):
+            route_used = "direct"
+            for pkg in x_packages[:3]:
+                caption = pkg.get("caption", "") or pkg.get("title", "")
+                hashtags = pkg.get("hashtags", [])
+                if hashtags:
+                    caption = f"{caption}\n\n{' '.join(hashtags[:5])}"
+                caption = caption[:280]
+                post = await service.create_post(text=caption)
+                result = post.to_dict()
+                result["route_used"] = "direct"
+                publish_results.append(result)
+
+        # --- Buffer fallback path ---
+        elif os.environ.get("BUFFER_ACCESS_TOKEN", ""):
+            route_used = "buffer"
+            try:
+                from sfc.connectors.buffer.service import get_buffer_service
+                buf_service = get_buffer_service()
+                for pkg in x_packages[:3]:
+                    buf_results = await buf_service.publish_content_package(pkg)
+                    for r in buf_results:
+                        d = r.to_dict()
+                        d["route_used"] = "buffer"
+                        publish_results.append(d)
+            except Exception as buf_exc:
+                logger.warning("[X Connector] Buffer fallback failed: %s", buf_exc)
+
+        else:
+            logger.info("[X Connector] No X or Buffer credentials — skipping publish")
+
+        # Social intelligence feed (always runs)
         trends = await service.get_trending_topics()
         trend_dicts = [t.to_dict() for t in trends[:10]]
 
@@ -41,7 +76,6 @@ async def x_connector_node(state: dict[str, Any]) -> dict[str, Any]:
 
         conversations = await service.search_conversations("SaudiFootball", max_results=5)
 
-        # Feed into 8B-compatible state keys
         social_intelligence_update = {
             "trending_topics": trend_dicts,
             "keyword_trends": [t.to_dict() for t in kw_trends],
@@ -55,11 +89,11 @@ async def x_connector_node(state: dict[str, Any]) -> dict[str, Any]:
         return {
             "x_results": {
                 "publish_results": publish_results,
+                "route_used": route_used,
                 "social_intelligence": social_intelligence_update,
                 "report": report.to_dict(),
                 "observability": service.observability.to_dict(),
             },
-            # Also write back to trend_radar_data for 8B/8C feed
             "trend_radar_data": {
                 **state.get("trend_radar_data", {}),
                 "live_trends": trend_dicts,
