@@ -139,6 +139,51 @@ class BufferPublisher:
             raise MediaValidationError(f"Media file unreadable: {media_url}: {exc}") from exc
 
     async def _call_create_update(self, post: BufferPost, profile_id: str) -> BufferPublishResult:
+        """Route to GraphQL (API Key tokens) or REST (legacy OAuth tokens)."""
+        from sfc.connectors.buffer.graphql_client import BufferGraphQLClient
+        token = os.environ.get("BUFFER_ACCESS_TOKEN", "")
+        if BufferGraphQLClient.is_api_key(token):
+            return await self._call_graphql_create_post(post, profile_id)
+        return await self._call_rest_create_update(post, profile_id)
+
+    async def _call_graphql_create_post(self, post: BufferPost, profile_id: str) -> BufferPublishResult:
+        """Create a post via the Buffer GraphQL API (required for API Key tokens)."""
+        from sfc.connectors.buffer.graphql_client import BufferGraphQLClient, BufferGraphQLError
+
+        gql_client = BufferGraphQLClient()  # fresh — reads LIVE_PUBLISHING_ENABLED now
+        scheduled_at = post.scheduled_at.isoformat() if post.scheduled_at else None
+
+        try:
+            post_data = await gql_client.create_post(
+                channel_id=profile_id,
+                text=self._build_text(post),
+                scheduled_at=scheduled_at,
+            )
+        except BufferGraphQLError as exc:
+            raise BufferAPIError(str(exc), status_code=exc.status_code, permanent=exc.permanent) from exc
+
+        if post_data.get("dry_run"):
+            return self._dry_run_result(post)
+
+        buffer_post_id = str(post_data.get("id", ""))
+        if not buffer_post_id:
+            raise BufferAPIError("GraphQL createPost returned no post ID — creation unconfirmed", permanent=False)
+
+        post.status = BufferPostStatus.SCHEDULED
+        post.platform_post_id = buffer_post_id
+        post.published_at = datetime.utcnow() if not post.scheduled_at else None
+
+        logger.info("[Publisher] Post created via GraphQL — platform=%s buffer_id=%s", post.platform.value, buffer_post_id)
+        return BufferPublishResult(
+            post_id=post.post_id,
+            platform=post.platform,
+            platform_post_id=buffer_post_id,
+            status=BufferPostStatus.SCHEDULED,
+            url=f"https://buffer.com/p/{buffer_post_id}",
+        )
+
+    async def _call_rest_create_update(self, post: BufferPost, profile_id: str) -> BufferPublishResult:
+        """Create a post via the Buffer REST API v1 (legacy OAuth tokens only)."""
         data: dict[str, Any] = {
             "profile_ids[]": profile_id,
             "text": self._build_text(post),
@@ -153,7 +198,6 @@ class BufferPublisher:
 
         response = await self._client.post("updates/create.json", data=data)
 
-        # Confirm Buffer returned a real post ID — never trust success without it
         updates = response.get("updates", [])
         if not updates:
             raise BufferAPIError("Buffer returned no post IDs — creation unconfirmed", permanent=False)
@@ -166,7 +210,7 @@ class BufferPublisher:
         post.platform_post_id = buffer_post_id
         post.published_at = datetime.utcnow() if not post.scheduled_at else None
 
-        logger.info("[Publisher] Post created — platform=%s buffer_id=%s", post.platform.value, buffer_post_id)
+        logger.info("[Publisher] Post created via REST — platform=%s buffer_id=%s", post.platform.value, buffer_post_id)
         return BufferPublishResult(
             post_id=post.post_id,
             platform=post.platform,

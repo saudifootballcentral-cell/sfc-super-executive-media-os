@@ -61,6 +61,30 @@ query SFCGetChannels($organizationId: OrganizationId!) {
 }
 """
 
+# ---------------------------------------------------------------------------
+# Publish mutation — creates a post via the new Buffer API
+# ---------------------------------------------------------------------------
+_MUTATION_CREATE_POST = """
+mutation SFCCreatePost($channelId: String!, $text: String!, $scheduledAt: String) {
+  createPost(input: {
+    channelId: $channelId
+    text: $text
+    scheduledAt: $scheduledAt
+  }) {
+    post {
+      id
+      status
+      text
+      scheduledAt
+    }
+    error {
+      type
+      message
+    }
+  }
+}
+"""
+
 
 class BufferGraphQLError(Exception):
     """Raised for confirmed Buffer GraphQL errors."""
@@ -210,8 +234,50 @@ class BufferGraphQLClient:
             logger.error("[BufferGraphQL] Channel fetch failed: %s", exc)
             return []
 
+    async def create_post(
+        self,
+        channel_id: str,
+        text: str,
+        scheduled_at: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a post via the Buffer GraphQL API.
+
+        Returns the post dict (with at least an 'id') on success.
+        Raises BufferGraphQLError on failure.
+        """
+        if not self._live:
+            dry_id = f"dry_gql_{channel_id[:8]}"
+            logger.debug("[BufferGraphQL][DRY-RUN] create_post skipped — dry_id=%s", dry_id)
+            return {"id": dry_id, "status": "scheduled", "dry_run": True}
+
+        variables: dict[str, Any] = {"channelId": channel_id, "text": text}
+        if scheduled_at is not None:
+            variables["scheduledAt"] = scheduled_at
+
+        data = await self.query(_MUTATION_CREATE_POST, variables)
+        result = data.get("createPost", {})
+
+        error = result.get("error")
+        if error and error.get("message"):
+            raise BufferGraphQLError(
+                f"Buffer createPost error: {error['message']} (type={error.get('type', '?')})",
+                status_code=200,
+                permanent=True,
+            )
+
+        post = result.get("post")
+        if not post or not post.get("id"):
+            raise BufferGraphQLError(
+                "Buffer createPost returned no post ID — creation unconfirmed",
+                status_code=200,
+                permanent=False,
+            )
+
+        logger.info("[BufferGraphQL] Post created — channel=%s buffer_id=%s", channel_id, post["id"])
+        return post
+
     async def query(self, gql: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Execute a GraphQL query and return the `data` payload."""
+        """Execute a GraphQL query or mutation and return the `data` payload."""
         if not self._live:
             return {"dry_run": True}
         headers = {
