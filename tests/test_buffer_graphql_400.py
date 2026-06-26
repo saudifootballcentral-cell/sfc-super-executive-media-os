@@ -391,17 +391,103 @@ class TestPhaseVIErrorSurfacing:
 
 
 # ---------------------------------------------------------------------------
+# 8. Mutation structure correctness
+# ---------------------------------------------------------------------------
+
+class TestMutationStructure:
+
+    def test_channelid_type_is_channelid_not_string(self):
+        """$channelId must be typed as ChannelId! not String!."""
+        from sfc.connectors.buffer.graphql_client import _MUTATION_CREATE_POST
+        assert "ChannelId!" in _MUTATION_CREATE_POST
+        assert "$channelId: String!" not in _MUTATION_CREATE_POST
+
+    def test_scheduling_type_immediate_present(self):
+        """schedulingType: IMMEDIATE must be in the mutation input."""
+        from sfc.connectors.buffer.graphql_client import _MUTATION_CREATE_POST
+        assert "schedulingType: IMMEDIATE" in _MUTATION_CREATE_POST
+
+    def test_share_mode_direct_present(self):
+        """shareMode: DIRECT must be in the mutation input."""
+        from sfc.connectors.buffer.graphql_client import _MUTATION_CREATE_POST
+        assert "shareMode: DIRECT" in _MUTATION_CREATE_POST
+
+    def test_post_action_success_inline_fragment(self):
+        """Response must use inline fragment on PostActionSuccess, not direct 'post' field."""
+        from sfc.connectors.buffer.graphql_client import _MUTATION_CREATE_POST
+        assert "... on PostActionSuccess" in _MUTATION_CREATE_POST
+        # Must NOT query post or errors directly on PostActionPayload
+        # (they only exist inside PostActionSuccess fragment)
+        import re
+        # 'post {' should only appear inside the inline fragment, not at top-level
+        lines = _MUTATION_CREATE_POST.splitlines()
+        in_fragment = False
+        for line in lines:
+            stripped = line.strip()
+            if "... on PostActionSuccess" in stripped:
+                in_fragment = True
+            if in_fragment and stripped == "}":
+                in_fragment = False
+        # The mutation should not have errors { at the top level of createPost
+        assert "errors {" not in _MUTATION_CREATE_POST
+
+    @pytest.mark.asyncio
+    async def test_create_post_parses_post_action_success_response(self):
+        """create_post() correctly parses {'post': {'id': '...'}} from PostActionSuccess."""
+        client = _make_client()
+
+        async def mock_post(*args, **kwargs):
+            return _resp(200, {"data": {"createPost": {"post": {"id": "buf_12345"}}}})
+
+        with patch("httpx.AsyncClient") as mock_cls:
+            mock_inst = AsyncMock()
+            mock_inst.__aenter__ = AsyncMock(return_value=mock_inst)
+            mock_inst.__aexit__ = AsyncMock(return_value=None)
+            mock_inst.post = mock_post
+            mock_cls.return_value = mock_inst
+
+            result = await client.create_post(channel_id="ch_abc", text="Test post")
+
+        assert result["id"] == "buf_12345"
+
+    @pytest.mark.asyncio
+    async def test_create_post_raises_when_no_post_id(self):
+        """create_post() raises permanent=False when createPost returns empty (no fragment match)."""
+        client = _make_client()
+
+        async def mock_post(*args, **kwargs):
+            # Union returned a non-PostActionSuccess type → empty result
+            return _resp(200, {"data": {"createPost": {}}})
+
+        with patch("httpx.AsyncClient") as mock_cls:
+            mock_inst = AsyncMock()
+            mock_inst.__aenter__ = AsyncMock(return_value=mock_inst)
+            mock_inst.__aexit__ = AsyncMock(return_value=None)
+            mock_inst.post = mock_post
+            mock_cls.return_value = mock_inst
+
+            with pytest.raises(BufferGraphQLError) as exc_info:
+                await client.create_post(channel_id="ch_abc", text="Test post")
+
+        assert "no post ID" in str(exc_info.value)
+        assert exc_info.value.permanent is False
+
+
+# ---------------------------------------------------------------------------
 # Shared GQL string for tests
 # ---------------------------------------------------------------------------
 
 _MUTATION_CREATE_POST_GQL = """
-mutation SFCCreatePost($channelId: String!, $text: String!) {
+mutation SFCCreatePost($channelId: ChannelId!, $text: String!) {
   createPost(input: {
     channelId: $channelId
     text: $text
+    schedulingType: IMMEDIATE
+    shareMode: DIRECT
   }) {
-    post { id }
-    errors { message }
+    ... on PostActionSuccess {
+      post { id }
+    }
   }
 }
 """

@@ -65,19 +65,28 @@ query SFCGetChannels($organizationId: OrganizationId!) {
 """
 
 # ---------------------------------------------------------------------------
-# Publish mutation — creates a post via the new Buffer API
+# Publish mutation — Buffer new API (API Key auth)
+#
+# Schema notes confirmed from live API validation errors:
+#   - channelId must be type ChannelId!, not String!
+#   - schedulingType: SchedulingType! is required (enum value: IMMEDIATE)
+#   - shareMode: ShareMode! is required (enum value: DIRECT)
+#   - Response is a union (PostActionPayload); must use inline fragments.
+#     PostActionSuccess has post { id }.
+#     There is no top-level 'post' or 'errors' field on PostActionPayload.
 # ---------------------------------------------------------------------------
 _MUTATION_CREATE_POST = """
-mutation SFCCreatePost($channelId: String!, $text: String!) {
+mutation SFCCreatePost($channelId: ChannelId!, $text: String!) {
   createPost(input: {
     channelId: $channelId
     text: $text
+    schedulingType: IMMEDIATE
+    shareMode: DIRECT
   }) {
-    post {
-      id
-    }
-    errors {
-      message
+    ... on PostActionSuccess {
+      post {
+        id
+      }
     }
   }
 }
@@ -242,6 +251,13 @@ class BufferGraphQLClient:
 
         Returns the post dict (with at least an 'id') on success.
         Raises BufferGraphQLError on failure.
+
+        Response handling: createPost returns a union (PostActionPayload).
+        The mutation queries '... on PostActionSuccess { post { id } }' only.
+        If the result matches PostActionSuccess, post.id is present.
+        If it doesn't match (e.g. validation error), result is empty/null —
+        the error message comes from the top-level GraphQL 'errors' array
+        which _handle_response() already raises as BufferGraphQLError.
         """
         if not self._live:
             dry_id = f"dry_gql_{channel_id[:8]}"
@@ -249,25 +265,17 @@ class BufferGraphQLClient:
             return {"id": dry_id, "dry_run": True}
 
         variables: dict[str, Any] = {"channelId": channel_id, "text": text}
-        # scheduledAt omitted — always publish immediately
 
         data = await self.query(_MUTATION_CREATE_POST, variables)
-        result = data.get("createPost", {})
 
-        # Buffer returns errors as a list (plural)
-        errors = result.get("errors") or []
-        if errors:
-            messages = "; ".join(e.get("message", str(e)) for e in errors)
-            raise BufferGraphQLError(
-                f"Buffer createPost errors: {messages}",
-                status_code=200,
-                permanent=True,
-            )
-
+        # createPost returns a union; our fragment matches PostActionSuccess only.
+        # data["createPost"] is {"post": {"id": "..."}} on success, or {} / None otherwise.
+        result = data.get("createPost") or {}
         post = result.get("post")
         if not post or not post.get("id"):
             raise BufferGraphQLError(
-                "Buffer createPost returned no post ID — creation unconfirmed",
+                "Buffer createPost returned no post ID — creation unconfirmed "
+                "(mutation matched no PostActionSuccess fragment)",
                 status_code=200,
                 permanent=False,
             )
