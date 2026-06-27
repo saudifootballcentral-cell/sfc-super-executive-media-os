@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 from sfc.video_intelligence.captioning.models import CaptioningResult
 from sfc.video_intelligence.clipping.models import VideoClip
 from sfc.video_intelligence.enhancement.models import EnhancementResult
 from sfc.video_intelligence.packaging.models import ClipPackage, PlatformClipVariant
 from sfc.video_intelligence.scoring.models import ClipScore
+
+if TYPE_CHECKING:
+    from sfc.video_intelligence.ingestion.models import VideoSource
 
 logger = logging.getLogger("sfc.video_intelligence.packaging")
 
@@ -44,11 +48,14 @@ class ClipPackagingEngine:
         score: ClipScore,
         enhancement: EnhancementResult,
         captioning: CaptioningResult,
+        source: "VideoSource | None" = None,
     ) -> ClipPackage:
         hashtags = list(_DEFAULT_HASHTAGS)
+        attribution = source.attribution if source else ""
+        platform_rights = list(source.platform_rights) if source else []
 
         variants = self._build_variants(
-            clip, score, enhancement, captioning
+            clip, score, enhancement, captioning, platform_rights
         )
 
         package = ClipPackage(
@@ -61,6 +68,8 @@ class ClipPackagingEngine:
             variants=variants,
             quality_score=score.overall_score,
             dry_run=enhancement.dry_run,
+            attribution=attribution,
+            platform_rights=platform_rights,
         )
 
         # Add platform-specific hashtags for each variant's platform
@@ -85,11 +94,19 @@ class ClipPackagingEngine:
         score: ClipScore,
         enhancement: EnhancementResult,
         captioning: CaptioningResult,
+        platform_rights: list[str] | None = None,
     ) -> list[PlatformClipVariant]:
         variants: list[PlatformClipVariant] = []
 
         # Map enhancement variants → packaging variants
         for ev in enhancement.variants:
+            # Platform rights restriction: skip platforms not in the rights list
+            if platform_rights and ev.platform not in platform_rights:
+                logger.info(
+                    "[Packaging] Skipping platform=%s — not in platform_rights=%s",
+                    ev.platform, platform_rights,
+                )
+                continue
             caption_track = captioning.track_for("arabic")
             caption_path = caption_track.local_path if caption_track else ""
 
@@ -115,17 +132,19 @@ class ClipPackagingEngine:
 
         # Fallback: if no enhancement variants, add a single reference variant
         if not variants and score.best_platform:
-            ps = score.best_platform_score()
-            variants.append(
-                PlatformClipVariant(
-                    platform=score.best_platform,
-                    aspect_ratio=ps.recommended_format if ps else "16:9",
-                    duration_seconds=clip.duration_seconds,
-                    local_path=clip.local_path,
-                    ready_to_publish=False,
-                    metadata={"fallback": True, "dry_run": enhancement.dry_run},
+            best = score.best_platform
+            if not platform_rights or best in platform_rights:
+                ps = score.best_platform_score()
+                variants.append(
+                    PlatformClipVariant(
+                        platform=best,
+                        aspect_ratio=ps.recommended_format if ps else "16:9",
+                        duration_seconds=clip.duration_seconds,
+                        local_path=clip.local_path,
+                        ready_to_publish=False,
+                        metadata={"fallback": True, "dry_run": enhancement.dry_run},
+                    )
                 )
-            )
 
         return variants
 

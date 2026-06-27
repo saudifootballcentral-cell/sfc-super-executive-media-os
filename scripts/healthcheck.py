@@ -65,4 +65,22 @@ try:
 except Exception as exc:
     fail(f"footage_discovery import raised: {exc}")
 
+# Voiceover + Music
+try:
+    from sfc.video_intelligence.voiceover.service import get_voiceover_service
+    from sfc.video_intelligence.music.service import get_music_library_service
+    get_voiceover_service()
+    get_music_library_service()
+    ok("voiceover_music")
+except Exception as exc:
+    fail(f"voiceover/music import raised: {exc}")
+
+# Platform publishers
+try:
+    from sfc.connectors.youtube.publisher import YouTubeVideoPublisher
+    from sfc.connectors.instagram.publisher import InstagramReelPublisher
+    ok("platform_publishers")
+except Exception as exc:
+    fail(f"platform_publishers import raised: {exc}")
+
 print("healthy")

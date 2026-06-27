@@ -97,6 +97,7 @@ RUN mkdir -p \
     artifacts/video/clips/rendered \
     artifacts/video/clips/subtitles \
     artifacts/video/downloads \
+    artifacts/video/voiceover \
     && chown -R sfc:sfc /app/artifacts
 
 # Switch to non-root user

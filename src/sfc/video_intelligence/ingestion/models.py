@@ -111,11 +111,27 @@ class VideoSource(BaseModel):
     url: str = ""
     title: str = ""
     rights_status: RightsStatus = RightsStatus.UNKNOWN
+    # Rights metadata
+    license_expires_at: datetime | None = None       # None = no expiry / perpetual
+    attribution: str = ""                             # credit line to include in output
+    platform_rights: list[str] = Field(default_factory=list)  # [] = all platforms; non-empty = restricted
     submitted_at: datetime = Field(default_factory=datetime.utcnow)
     submitter: str = ""
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     model_config = {"frozen": False}
+
+    @property
+    def license_expired(self) -> bool:
+        if self.license_expires_at is None:
+            return False
+        return datetime.utcnow() > self.license_expires_at
+
+    def is_permitted_for_platform(self, platform: str) -> bool:
+        """Return True if publishing to ``platform`` is permitted by this source's rights."""
+        if not self.platform_rights:
+            return True  # no restriction = all platforms permitted
+        return platform in self.platform_rights
 
 
 class VideoIngestionResult(BaseModel):

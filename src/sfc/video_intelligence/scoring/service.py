@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import random
 
 from sfc.video_intelligence.clipping.models import ClipSourceType, VideoClip
 from sfc.video_intelligence.event_detection.models import SportEventType
@@ -81,7 +80,7 @@ class ClipScoringEngine:
             dur_bonus = -10.0
         else:
             dur_bonus = 0.0
-        return min(100.0, round(base + dur_bonus + random.uniform(-3, 3), 1))
+        return min(100.0, round(base + dur_bonus + self._clip_variance(clip, 3.0), 1))
 
     def _score_audience_appeal(self, clip: VideoClip) -> float:
         if clip.source_type == ClipSourceType.SPORT_EVENT:
@@ -90,14 +89,25 @@ class ClipScoringEngine:
             base = 70.0
         else:
             base = 68.0
-        return min(100.0, round(base + random.uniform(-5, 5), 1))
+        return min(100.0, round(base + self._clip_variance(clip, 5.0), 1))
 
     def _score_brand_alignment(self, clip: VideoClip) -> float:
-        # All SFC clips default to high brand alignment
         base = 82.0
         if clip.clip_type in ("controversial",):
             base = 62.0
-        return min(100.0, round(base + random.uniform(-4, 4), 1))
+        return min(100.0, round(base + self._clip_variance(clip, 4.0), 1))
+
+    @staticmethod
+    def _clip_variance(clip: VideoClip, scale: float) -> float:
+        """Deterministic ±scale variance derived from the clip_id hash.
+
+        Produces stable, repeatable scores without external randomness — the same
+        clip always gets the same score, making results predictable across retries.
+        """
+        digest = int(clip.clip_id.replace("-", ""), 16)
+        # Map to [-1, 1] via modular arithmetic then scale
+        normalised = ((digest % 1000) / 500.0) - 1.0
+        return round(normalised * scale, 2)
 
     def _score_technical_quality(self, clip: VideoClip) -> float:
         if clip.file_size_bytes > 0:

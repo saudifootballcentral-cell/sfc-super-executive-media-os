@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 from sfc.video_intelligence.governance.models import (
     ClipGovernanceResult,
@@ -14,6 +15,9 @@ from sfc.video_intelligence.shared.constants import (
     CLIP_QUALITY_THRESHOLD,
     is_video_processing_enabled,
 )
+
+if TYPE_CHECKING:
+    from sfc.video_intelligence.ingestion.models import VideoSource
 
 logger = logging.getLogger("sfc.video_intelligence.governance")
 
@@ -39,6 +43,7 @@ class ClipGovernanceLayer:
         self,
         package: ClipPackage,
         rights_status: RightsStatus,
+        source: "VideoSource | None" = None,
     ) -> ClipGovernanceResult:
         result = ClipGovernanceResult(
             clip_id=package.clip_id,
@@ -46,13 +51,27 @@ class ClipGovernanceLayer:
         )
         issues: list[str] = []
 
-        # Rights gate
+        # Rights gate — RESTRICTED always blocks
         if rights_status == RightsStatus.RESTRICTED:
             result.status = ClipGovernanceStatus.RIGHTS_BLOCKED
             result.rights_verified = False
             issues.append("Source rights are RESTRICTED — publishing blocked")
             result.issues = issues
             logger.warning("[Governance] Rights blocked: clip_id=%s", package.clip_id)
+            return result
+
+        # License expiry gate — expired license treated same as RESTRICTED
+        if source is not None and source.license_expired:
+            result.status = ClipGovernanceStatus.RIGHTS_BLOCKED
+            result.rights_verified = False
+            issues.append(
+                f"License expired at {source.license_expires_at.isoformat()} — publishing blocked"
+            )
+            result.issues = issues
+            logger.warning(
+                "[Governance] License expired: clip_id=%s expires=%s",
+                package.clip_id, source.license_expires_at,
+            )
             return result
 
         result.rights_verified = rights_status in (

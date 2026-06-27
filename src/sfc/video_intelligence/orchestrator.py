@@ -103,6 +103,9 @@ class VideoIntelligenceOrchestrator:
         from sfc.video_intelligence.publishing.service import get_clip_publishing_integration
         from sfc.video_intelligence.learning.service import get_clip_learning_loop
 
+        from sfc.video_intelligence.voiceover.service import get_voiceover_service
+        from sfc.video_intelligence.music.service import get_music_library_service
+
         self._ingestion = get_video_ingestion_service()
         self._understanding = get_video_understanding_service()
         self._event_detection = get_sport_event_detection_service()
@@ -111,6 +114,8 @@ class VideoIntelligenceOrchestrator:
         self._scoring = get_clip_scoring_engine()
         self._enhancement = get_clip_enhancement_engine()
         self._captioning = get_auto_captioning_engine()
+        self._voiceover = get_voiceover_service()
+        self._music = get_music_library_service()
         self._rendering = get_video_rendering_service()
         self._packaging = get_clip_packaging_engine()
         self._governance = get_clip_governance_layer()
@@ -194,7 +199,7 @@ class VideoIntelligenceOrchestrator:
         transcript = understanding.transcript if understanding else None
 
         for clip in clips:
-            clip_result = await self._process_clip(clip, transcript, rights_status)
+            clip_result = await self._process_clip(clip, transcript, rights_status, source)
             result.clip_results.append(clip_result)
             if clip_result.publish_record.get("status") in ("submitted", "blocked"):
                 if clip_result.package.published:
@@ -205,7 +210,11 @@ class VideoIntelligenceOrchestrator:
         return result
 
     async def _process_clip(
-        self, clip: VideoClip, transcript: Any, rights_status: Any
+        self,
+        clip: VideoClip,
+        transcript: Any,
+        rights_status: Any,
+        source: "VideoSource | None" = None,
     ) -> ClipPipelineResult:
         # Stage 6: Score
         try:
@@ -229,27 +238,47 @@ class VideoIntelligenceOrchestrator:
             logger.error("[Orchestrator] Captioning error clip=%s: %s", clip.clip_id, exc)
             captioning = CaptioningResult(clip_id=clip.clip_id)
 
-        # Stage 8.5: Render — brand, subtitle, and mix each enhanced variant
+        # Stage 8.1: Voice-over synthesis — generates Arabic narration from clip description
+        voiceover_track = None
+        try:
+            vo_text = clip.description or clip.title
+            voiceover_track = await self._voiceover.synthesise(clip.clip_id, vo_text)
+        except Exception as exc:
+            logger.debug("[Orchestrator] Voiceover skipped clip=%s: %s", clip.clip_id, exc)
+
+        # Stage 8.2: Background music selection — theme-matched from local library
+        music_track = None
+        try:
+            music_track = self._music.select(clip.clip_type)
+        except Exception as exc:
+            logger.debug("[Orchestrator] Music skipped clip=%s: %s", clip.clip_id, exc)
+
+        # Stage 8.5: Render — brand, subtitle, audio mix each enhanced variant
         rendering: RenderedVideo | None = None
         try:
             best_variant = (
                 enhancement.ready_variants[0] if enhancement.ready_variants else None
             )
             if best_variant:
+                audio_tracks = [
+                    t for t in [voiceover_track, music_track] if t is not None
+                ]
                 rendering = await self._rendering.render_clip(
                     clip=clip,
                     variant=best_variant,
                     captioning=captioning,
+                    audio_tracks=audio_tracks if audio_tracks else None,
                 )
-                # Update the variant's local_path so packaging picks up the rendered file
                 if rendering.is_ready:
                     best_variant.local_path = rendering.local_path
         except Exception as exc:
             logger.error("[Orchestrator] Rendering error clip=%s: %s", clip.clip_id, exc)
 
-        # Stage 9: Package
+        # Stage 9: Package — propagate attribution + platform rights from source
         try:
-            package = await self._packaging.package(clip, score, enhancement, captioning)
+            package = await self._packaging.package(
+                clip, score, enhancement, captioning, source=source
+            )
         except Exception as exc:
             logger.error("[Orchestrator] Packaging error clip=%s: %s", clip.clip_id, exc)
             from sfc.video_intelligence.packaging.models import ClipPackage
@@ -259,9 +288,9 @@ class VideoIntelligenceOrchestrator:
                 title=clip.title,
             )
 
-        # Stage 10: Governance
+        # Stage 10: Governance — checks rights, expiry, brand safety, quality
         try:
-            governance = await self._governance.review(package, rights_status)
+            governance = await self._governance.review(package, rights_status, source=source)
         except Exception as exc:
             logger.error("[Orchestrator] Governance error clip=%s: %s", clip.clip_id, exc)
             governance = ClipGovernanceResult(

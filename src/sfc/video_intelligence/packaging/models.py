@@ -36,6 +36,8 @@ class ClipPackage(BaseModel):
     governance_cleared: bool = False
     published: bool = False
     dry_run: bool = False
+    attribution: str = ""                             # credit line propagated from VideoSource
+    platform_rights: list[str] = Field(default_factory=list)  # [] = all; non-empty = restricted
     created_at: datetime = Field(default_factory=datetime.utcnow)
     metadata: dict = Field(default_factory=dict)
 
