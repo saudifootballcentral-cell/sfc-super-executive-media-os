@@ -42,7 +42,7 @@ class ClipGovernanceLayer:
     async def review(
         self,
         package: ClipPackage,
-        rights_status: RightsStatus,
+        rights_status: "RightsStatus | None",
         source: "VideoSource | None" = None,
     ) -> ClipGovernanceResult:
         result = ClipGovernanceResult(
@@ -50,6 +50,10 @@ class ClipGovernanceLayer:
             package_id=package.package_id,
         )
         issues: list[str] = []
+
+        # AI-generated content is treated as OWNED — no external rights gate needed
+        if rights_status is None:
+            rights_status = RightsStatus.OWNED
 
         # Rights gate — RESTRICTED always blocks
         if rights_status == RightsStatus.RESTRICTED:

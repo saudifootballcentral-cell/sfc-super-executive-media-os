@@ -59,11 +59,13 @@ class TestClipPublishing:
 
     @pytest.mark.asyncio
     async def test_approved_governance_submits_to_content_packaging(self):
+        # x_video routes through ContentPackagingService (Buffer); youtube goes to YouTubeVideoPublisher
         svc = ClipPublishingIntegration()
         svc.reset_for_test()
-        result = await svc.publish(_package(), _approved_governance())
+        result = await svc.publish(_package(platform="x_video"), _approved_governance())
         assert result["status"] == "submitted"
-        assert "content_package_id" in result
+        platform_result = result["platform_results"][0]
+        assert "content_package_id" in platform_result
 
     @pytest.mark.asyncio
     async def test_published_record_stored(self):
