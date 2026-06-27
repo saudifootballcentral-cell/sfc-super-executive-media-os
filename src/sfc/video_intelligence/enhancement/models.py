@@ -21,6 +21,7 @@ class EnhancedClipVariant(BaseModel):
     platform: str
     aspect_ratio: AspectRatio
     local_path: str = ""
+    public_url: str = ""
     duration_seconds: float = 0.0
     file_size_bytes: int = 0
     has_subtitles: bool = False

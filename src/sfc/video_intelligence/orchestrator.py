@@ -271,6 +271,7 @@ class VideoIntelligenceOrchestrator:
                 )
                 if rendering.is_ready:
                     best_variant.local_path = rendering.local_path
+                    best_variant.public_url = rendering.public_url
         except Exception as exc:
             logger.error("[Orchestrator] Rendering error clip=%s: %s", clip.clip_id, exc)
 

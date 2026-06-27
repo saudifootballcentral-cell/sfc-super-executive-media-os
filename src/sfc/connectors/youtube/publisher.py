@@ -46,7 +46,7 @@ class YouTubeVideoPublisher:
             description=description[:5000],
             tags=self._clean_tags(package.hashtags),
             privacy=VideoPrivacy.PUBLIC,
-            file_url=variant.local_path,   # service handles local → bytes
+            file_url=variant.public_url or variant.local_path,
             thumbnail_url=variant.thumbnail_path,
             is_short=is_short,
             language="ar",

@@ -45,6 +45,7 @@ from sfc.video_intelligence.rendering.models import (
     SubtitleStyle,
     _DEFAULT_SPEC,
 )
+from sfc.storage.service import get_clip_storage_service
 from sfc.video_intelligence.shared.constants import (
     CLIP_STORAGE_ROOT,
     is_video_processing_enabled,
@@ -143,6 +144,7 @@ class VideoRenderingService:
             self._run(cmd)
 
             result = self._populate_result(result, output_path, sidecar)
+            result.public_url = self._upload(result.local_path, clip.clip_id, variant.platform)
         except Exception as exc:
             logger.error("[Render] Single clip failed clip_id=%s: %s", clip.clip_id, exc)
             result.status = RenderStatus.FAILED
@@ -239,7 +241,15 @@ class VideoRenderingService:
             result.error_message = str(exc)
             return result
 
-        return self._populate_result(result, output_path, sidecar)
+        result = self._populate_result(result, output_path, sidecar)
+        public_url = self._upload(
+            result.local_path,
+            clip_id=f"comp_{comp_id}",
+            platform=platform,
+        )
+        if public_url:
+            result.public_url = public_url
+        return result
 
     # ------------------------------------------------------------------
     # FFmpeg command builders
@@ -670,6 +680,14 @@ class VideoRenderingService:
             result.file_size_bytes,
         )
         return result
+
+    def _upload(self, local_path: str, clip_id: str, platform: str) -> str:
+        """Upload rendered file to cloud storage; return public URL or empty string."""
+        if not local_path:
+            return ""
+        storage = get_clip_storage_service()
+        key = f"clips/{clip_id}_{platform}.mp4"
+        return storage.upload(local_path, object_key=key) or ""
 
     def _dry_run(
         self,

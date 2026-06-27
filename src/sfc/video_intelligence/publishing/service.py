@@ -115,11 +115,9 @@ class ClipPublishingIntegration:
         try:
             from sfc.connectors.instagram.publisher import InstagramReelPublisher
             publisher = InstagramReelPublisher()
-            # Instagram needs a public URL; pass public_url from rendering metadata if available
-            public_url = variant.metadata.get("public_url", "")
             return await publisher.publish(
                 package, variant,
-                public_video_url=public_url,
+                public_video_url=variant.public_url,
                 attribution=package.attribution,
             )
         except Exception as exc:

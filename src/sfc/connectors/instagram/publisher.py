@@ -60,7 +60,10 @@ class InstagramReelPublisher:
         public_video_url: str = "",
         attribution: str = "",
     ) -> dict:
-        """Publish a Reel. ``public_video_url`` must be publicly reachable by Meta."""
+        """Publish a Reel. Uses ``variant.public_url`` if ``public_video_url`` not supplied."""
+        # Prefer the URL passed explicitly, fall back to the variant's own public_url
+        public_video_url = public_video_url or getattr(variant, "public_url", "")
+
         if not self.is_configured:
             logger.warning(
                 "[InstagramPublisher] Credentials not set — skipping clip_id=%s",
@@ -69,6 +72,7 @@ class InstagramReelPublisher:
             return {
                 "status": "skipped",
                 "reason": "INSTAGRAM_ACCESS_TOKEN or INSTAGRAM_BUSINESS_ACCOUNT_ID not set",
+                "platform": variant.platform,
                 "clip_id": package.clip_id,
             }
 
@@ -81,6 +85,7 @@ class InstagramReelPublisher:
             return {
                 "status": "skipped",
                 "reason": "No public_video_url; Instagram cannot download from local paths",
+                "platform": variant.platform,
                 "clip_id": package.clip_id,
             }
 

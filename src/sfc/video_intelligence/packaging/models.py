@@ -14,6 +14,7 @@ class PlatformClipVariant(BaseModel):
     aspect_ratio: str = "16:9"
     duration_seconds: float = 0.0
     local_path: str = ""
+    public_url: str = ""
     thumbnail_path: str = ""
     caption_path: str = ""
     file_size_bytes: int = 0

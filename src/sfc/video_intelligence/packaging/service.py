@@ -122,6 +122,7 @@ class ClipPackagingEngine:
                     aspect_ratio=ev.aspect_ratio.value,
                     duration_seconds=ev.duration_seconds,
                     local_path=ev.local_path,
+                    public_url=ev.public_url,
                     thumbnail_path=clip.thumbnail_path,
                     caption_path=caption_path,
                     file_size_bytes=ev.file_size_bytes,
