@@ -136,14 +136,20 @@ class ScriptGenerationService:
             logger.warning("[Script] JSON parse failed — returning stub")
             return self._stub_script(topic, duration_secs, 3, style, language)
 
+        raw_scenes = data.get("scenes", [])
+        if not raw_scenes:
+            logger.warning("[Script] Claude returned no scenes — returning stub")
+            return self._stub_script(topic, duration_secs, 3, style, language)
+
+        default_scene_dur = duration_secs / len(raw_scenes)
         scenes: list[ScriptScene] = []
-        for i, s in enumerate(data.get("scenes", [])):
+        for i, s in enumerate(raw_scenes):
             scenes.append(ScriptScene(
                 scene_id=str(uuid4()),
                 title=s.get("title", f"Scene {i + 1}"),
                 description=s.get("description", ""),
                 narration=s.get("narration", ""),
-                duration_seconds=float(s.get("duration_seconds", duration_secs / max(1, len(data.get("scenes", [1]))))),
+                duration_seconds=float(s.get("duration_seconds", default_scene_dur)),
                 visual_style=s.get("visual_style", "energetic"),
                 keywords=s.get("keywords", []),
             ))

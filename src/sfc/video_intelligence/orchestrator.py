@@ -4,16 +4,16 @@ Supports three production modes:
   Mode A — process_video()     — real footage ingestion pipeline
   Mode B — process_ai_video()  — AI-generated script → storyboard → video pipeline
   Mode C — process_hybrid()    — mix real footage + AI-generated gap fill
+
+process_auto() consults the VideoProductionRouter and dispatches to the
+right mode automatically.
 """
 
 from __future__ import annotations
 
 import logging
-import os
-import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -345,6 +345,44 @@ class VideoIntelligenceOrchestrator:
         )
 
     # ──────────────────────────────────────────────────────────────────────────
+    # Auto mode — router decides A / B / C
+    # ──────────────────────────────────────────────────────────────────────────
+
+    async def process_auto(
+        self,
+        topic: str,
+        source: "VideoSource | None" = None,
+        platforms: list[str] | None = None,
+        duration_secs: float = 60.0,
+        run_id: str | None = None,
+    ) -> "VideoIntelligenceResult":
+        """Consult the production router and dispatch to Mode A, B, or C."""
+        from sfc.video_intelligence.router.models import ProductionMode
+
+        decision = await self._router.decide(
+            topic,
+            footage_sources=[source] if source is not None else None,
+        )
+
+        if decision.mode == ProductionMode.HYBRID and source is not None:
+            result = await self.process_hybrid(source, topic, platforms=platforms, run_id=run_id)
+        elif decision.mode == ProductionMode.REAL_FOOTAGE and source is not None:
+            result = await self.process_video(source, run_id=run_id)
+        else:
+            result = await self.process_ai_video(
+                topic, platforms=platforms, duration_secs=duration_secs, run_id=run_id
+            )
+
+        result.metadata["router_decision"] = {
+            "mode": decision.mode.value,
+            "reason": decision.reason,
+            "confidence": decision.confidence,
+            "real_footage_available": decision.real_footage_available,
+            "ai_video_available": decision.ai_video_available,
+        }
+        return result
+
+    # ──────────────────────────────────────────────────────────────────────────
     # Mode B — AI Video Production
     # ──────────────────────────────────────────────────────────────────────────
 
@@ -423,7 +461,13 @@ class VideoIntelligenceOrchestrator:
         ai_results: list,
         platform: str,
     ) -> list[VideoClip]:
-        """Convert AI video results into synthetic VideoClips for the existing pipeline."""
+        """Convert AI video results into synthetic VideoClips for the existing pipeline.
+
+        FAILED scenes are dropped — a provider was configured but generation
+        broke, so there is no media to publish. SKIPPED scenes (no provider
+        configured) are kept so the dry-run pipeline still exercises end-to-end.
+        """
+        from sfc.video_intelligence.ai_video.models import AIVideoStatus
         from sfc.video_intelligence.clipping.models import ClipSourceType
 
         script_lookup = {s.scene_id: s for s in script.scenes}
@@ -431,6 +475,13 @@ class VideoIntelligenceOrchestrator:
         cumulative_start = 0.0
 
         for sb_scene, ai_result in zip(storyboard.scenes, ai_results):
+            if ai_result.status == AIVideoStatus.FAILED:
+                logger.warning(
+                    "[Orchestrator] Dropping failed AI scene=%s provider=%s: %s",
+                    sb_scene.scene_id, ai_result.provider, ai_result.error_message,
+                )
+                continue
+
             original_scene = script_lookup.get(sb_scene.script_scene_id)
             narration = original_scene.narration if original_scene else topic
 
@@ -529,13 +580,14 @@ class VideoIntelligenceOrchestrator:
                 num_scenes=ai_num_scenes,
             )
 
+            result.metadata["ai_scenes_generated"] = 0
             for platform in platforms:
                 storyboard = await self._storyboard.create(script, platform=platform)
                 ai_results = await self._ai_video.generate_video(storyboard)
                 ai_clips = self._build_ai_clips(ai_topic, script, storyboard, ai_results, platform)
 
                 result.total_clips_extracted += len(ai_clips)
-                result.metadata["ai_scenes_generated"] = len(ai_clips)
+                result.metadata["ai_scenes_generated"] += len(ai_clips)
 
                 for clip in ai_clips:
                     clip_result = await self._process_clip(

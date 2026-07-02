@@ -154,6 +154,10 @@ class StoryboardGenerationService:
                 style_tags=entry.get("style_tags", []),
             ))
 
+        if not sb_scenes:
+            logger.warning("[Storyboard] Claude returned no scenes — returning stub")
+            return self._stub_storyboard(script, platform, aspect_ratio)
+
         total = sum(s.duration_seconds for s in sb_scenes)
 
         board = Storyboard(

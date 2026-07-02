@@ -15,9 +15,6 @@ from uuid import uuid4
 from sfc.video_intelligence.ai_video.models import AIVideoResult, AIVideoStatus
 from sfc.video_intelligence.ai_video.providers.base import AIVideoProvider
 
-if TYPE_CHECKING := False:
-    pass
-
 logger = logging.getLogger("sfc.connectors.ai_video.kling")
 
 _BASE_URL = "https://api.klingai.com/v1/videos/text2video"
