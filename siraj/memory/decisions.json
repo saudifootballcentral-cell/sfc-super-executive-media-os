@@ -206,5 +206,19 @@
     "kind": "infra",
     "note": "Blender 5.0.1 installed as bpy in the cloud session (PyPI). Procedural pipeline runs in-cloud; stage-7 artifacts prebuilt while stage 6 awaits Meshy access. api.meshy.ai + download.blender.org blocked by env network policy.",
     "ts": "2026-07-03T02:56:35Z"
+  },
+  {
+    "kind": "route_amendment",
+    "asset": "Byte,Nova,Orbit,Pop",
+    "from": "meshy image-to-3d",
+    "to": "meshy text-to-3d (preview->QA->refine)",
+    "reason": "Mecanim rigging requires T-pose; key-art poses are dynamic action shots. Key art remains the style law for prompts and future retexture.",
+    "by": "asset-director",
+    "ts": "2026-07-03T13:13:33Z"
+  },
+  {
+    "kind": "ops_lesson",
+    "note": "Meshy API drift confirmed (OPS_LESSONS §3): art_style now accepts only realistic; sculpture removed. Fixed hero_preview.py + meshy_client.py. Stylization carried by prompt wording.",
+    "ts": "2026-07-03T13:14:30Z"
   }
 ]
