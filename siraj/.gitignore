@@ -1,0 +1,12 @@
+# runtime state — the engine owns these, never commit a live queue
+os/runtime/queue/*/*.json
+os/runtime/gates/*.json
+os/runtime/project.json
+memory/*.json
+
+# secrets — MESHY_API_KEY / UGS credentials live here
+home/mulerun/.env
+.env
+
+__pycache__/
+*.pyc
