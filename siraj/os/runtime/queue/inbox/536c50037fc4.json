@@ -1,0 +1,13 @@
+{
+  "id": "536c50037fc4",
+  "stage": "gameplay_systems",
+  "title": "Core C# systems for the slice (prebuilt in cloud while stage 6 pends)",
+  "act_as": "gameplay-programmer",
+  "priority": 8,
+  "payload": {
+    "path": "projects/moments/unity/Assets/_Moments/"
+  },
+  "attempts": 0,
+  "created": "2026-07-03T13:04:12Z",
+  "history": []
+}
