@@ -1,0 +1,205 @@
+[
+  {
+    "kind": "project_start",
+    "project": "Moments",
+    "note": "lifecycle begins at stage game_idea",
+    "ts": "2026-07-03T02:36:11Z"
+  },
+  {
+    "kind": "gdd_received",
+    "project": "Moments",
+    "note": "5 design docs (master bible v2.2, GDD v1, descriptions v1/v2, character pack v1.2) + 7 key-art images + 1 gameplay video archived in projects/moments/",
+    "docs": [
+      "master_design_bible_v2_2",
+      "gdd_v1_full",
+      "game_description_v2",
+      "game_description_v1",
+      "character_design_pack_v1_2"
+    ],
+    "ts": "2026-07-03T02:36:11Z"
+  },
+  {
+    "kind": "phase1_plan",
+    "project": "Moments",
+    "task": "4ffd73e14bc2",
+    "note": "Vertical Slice recommended: funnel + Polar Push + bots. 4 heroes via image-to-3d. Design ruling needed: cosmetic-first vs abilities. Plan at projects/moments/PLAN.md",
+    "status": "awaiting_creative_director_approval",
+    "ts": "2026-07-03T02:37:08Z"
+  },
+  {
+    "kind": "creative_director_ruling",
+    "project": "Moments",
+    "rulings": {
+      "scope": "Vertical Slice approved (funnel + Polar Push + bots)",
+      "heroes": "CharacterAbilitySystem hooks built now, identical stats in slice, abilities on in Alpha behind host toggle",
+      "roster": "4 heroes in slice: Byte, Nova, Orbit, Pop; 8 by Alpha"
+    },
+    "ts": "2026-07-03T02:42:42Z"
+  },
+  {
+    "kind": "asset_route",
+    "route": "meshy",
+    "asset": "Byte",
+    "type": "character",
+    "reason": "organic/complex form — Meshy image-to-3d exceeds the procedural sculpting ceiling",
+    "poly_budget": 15000,
+    "chain": [
+      "reuse: no existing asset with this name",
+      "retexture: not a variant/skin",
+      "procedural: not geometric/exact-dims"
+    ],
+    "meshy_kind": "image-to-3d",
+    "ts": "2026-07-03T02:44:58Z"
+  },
+  {
+    "kind": "asset_route",
+    "route": "meshy",
+    "asset": "Nova",
+    "type": "character",
+    "reason": "organic/complex form — Meshy image-to-3d exceeds the procedural sculpting ceiling",
+    "poly_budget": 15000,
+    "chain": [
+      "reuse: no existing asset with this name",
+      "retexture: not a variant/skin",
+      "procedural: not geometric/exact-dims"
+    ],
+    "meshy_kind": "image-to-3d",
+    "ts": "2026-07-03T02:44:58Z"
+  },
+  {
+    "kind": "asset_route",
+    "route": "meshy",
+    "asset": "Orbit",
+    "type": "character",
+    "reason": "organic/complex form — Meshy image-to-3d exceeds the procedural sculpting ceiling",
+    "poly_budget": 15000,
+    "chain": [
+      "reuse: no existing asset with this name",
+      "retexture: not a variant/skin",
+      "procedural: not geometric/exact-dims"
+    ],
+    "meshy_kind": "image-to-3d",
+    "ts": "2026-07-03T02:44:58Z"
+  },
+  {
+    "kind": "asset_route",
+    "route": "meshy",
+    "asset": "Pop",
+    "type": "character",
+    "reason": "organic/complex form — Meshy image-to-3d exceeds the procedural sculpting ceiling",
+    "poly_budget": 15000,
+    "chain": [
+      "reuse: no existing asset with this name",
+      "retexture: not a variant/skin",
+      "procedural: not geometric/exact-dims"
+    ],
+    "meshy_kind": "image-to-3d",
+    "ts": "2026-07-03T02:44:58Z"
+  },
+  {
+    "kind": "asset_route",
+    "route": "procedural",
+    "asset": "IceTile_Solid",
+    "type": "platform",
+    "reason": "exact dimensions / collider-driven geometry demand procedural control",
+    "poly_budget": 8000,
+    "chain": [
+      "reuse: no existing asset with this name",
+      "retexture: not a variant/skin"
+    ],
+    "ts": "2026-07-03T02:44:58Z"
+  },
+  {
+    "kind": "asset_route",
+    "route": "procedural",
+    "asset": "IceTile_Cracked",
+    "type": "platform",
+    "reason": "exact dimensions / collider-driven geometry demand procedural control",
+    "poly_budget": 8000,
+    "chain": [
+      "reuse: no existing asset with this name",
+      "retexture: not a variant/skin"
+    ],
+    "ts": "2026-07-03T02:44:58Z"
+  },
+  {
+    "kind": "asset_route",
+    "route": "procedural",
+    "asset": "IceTile_Breaking",
+    "type": "platform",
+    "reason": "exact dimensions / collider-driven geometry demand procedural control",
+    "poly_budget": 8000,
+    "chain": [
+      "reuse: no existing asset with this name",
+      "retexture: not a variant/skin"
+    ],
+    "ts": "2026-07-03T02:44:58Z"
+  },
+  {
+    "kind": "asset_route",
+    "route": "procedural",
+    "asset": "ArenaRim_COL",
+    "type": "wall",
+    "reason": "exact dimensions / collider-driven geometry demand procedural control",
+    "poly_budget": 8000,
+    "chain": [
+      "reuse: no existing asset with this name",
+      "retexture: not a variant/skin"
+    ],
+    "ts": "2026-07-03T02:44:58Z"
+  },
+  {
+    "kind": "asset_route",
+    "route": "procedural",
+    "asset": "Iceberg_A",
+    "type": "obstacle",
+    "reason": "type 'obstacle' is geometric/systemic — buildable in Blender in under a minute",
+    "poly_budget": 8000,
+    "chain": [
+      "reuse: no existing asset with this name",
+      "retexture: not a variant/skin"
+    ],
+    "ts": "2026-07-03T02:44:59Z"
+  },
+  {
+    "kind": "asset_route",
+    "route": "procedural",
+    "asset": "Iceberg_B",
+    "type": "obstacle",
+    "reason": "type 'obstacle' is geometric/systemic — buildable in Blender in under a minute",
+    "poly_budget": 8000,
+    "chain": [
+      "reuse: no existing asset with this name",
+      "retexture: not a variant/skin"
+    ],
+    "ts": "2026-07-03T02:44:59Z"
+  },
+  {
+    "kind": "asset_route",
+    "route": "meshy",
+    "asset": "Penguin",
+    "type": "creature",
+    "reason": "organic/complex form — Meshy text-to-3d exceeds the procedural sculpting ceiling",
+    "poly_budget": 15000,
+    "chain": [
+      "reuse: no existing asset with this name",
+      "retexture: not a variant/skin",
+      "procedural: not geometric/exact-dims"
+    ],
+    "meshy_kind": "text-to-3d",
+    "ts": "2026-07-03T02:44:59Z"
+  },
+  {
+    "kind": "asset_route",
+    "route": "procedural",
+    "asset": "HeroAnimationSet",
+    "type": "animation",
+    "reason": "type 'animation' is geometric/systemic — buildable in Blender in under a minute",
+    "poly_budget": 8000,
+    "chain": [
+      "reuse: no existing asset with this name",
+      "retexture: not a variant/skin"
+    ],
+    "ts": "2026-07-03T02:44:59Z"
+  }
+]

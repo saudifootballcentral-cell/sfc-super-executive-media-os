@@ -1,0 +1,20 @@
+{
+  "id": "d1b6384a63da",
+  "stage": "gdd",
+  "title": "Consolidate slice-scoped GDD with approved rulings",
+  "act_as": "game-designer",
+  "priority": 9,
+  "payload": {},
+  "attempts": 0,
+  "created": "2026-07-03T02:42:48Z",
+  "history": [
+    {
+      "ts": "2026-07-03T02:42:48Z",
+      "event": "dispatched"
+    },
+    {
+      "ts": "2026-07-03T02:43:33Z",
+      "event": "done"
+    }
+  ]
+}

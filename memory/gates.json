@@ -1,0 +1,37 @@
+[
+  {
+    "stage": "game_idea",
+    "status": "pass",
+    "note": "Creative Director approved plan + 3 rulings (see decisions log)",
+    "criteria": "Idea analyzed; development plan approved by Creative Director",
+    "ts": "2026-07-03T02:42:42Z"
+  },
+  {
+    "stage": "gdd",
+    "status": "pass",
+    "note": "VERTICAL_SLICE_GDD.md consolidated; rulings embedded; internally consistent",
+    "criteria": "GDD written and internally consistent",
+    "ts": "2026-07-03T02:43:33Z"
+  },
+  {
+    "stage": "tech_spec",
+    "status": "pass",
+    "note": "TECH_SPEC.md: systems, netcode, budgets, test plan, risks",
+    "criteria": "Technical spec: systems, risks, platform targets",
+    "ts": "2026-07-03T02:44:17Z"
+  },
+  {
+    "stage": "spec_json",
+    "status": "pass",
+    "note": "Moments_VerticalSlice.json: every asset has route + poly budget",
+    "criteria": "Assets/GameSpecs/<Game>.json complete — every asset has route + poly budget",
+    "ts": "2026-07-03T02:44:48Z"
+  },
+  {
+    "stage": "asset_routing",
+    "status": "pass",
+    "note": "12 assets routed and logged: 4 heroes + penguin=meshy, tiles/rim/icebergs/anims=procedural",
+    "criteria": "Every asset routed via asset_router.py; decisions logged",
+    "ts": "2026-07-03T02:45:19Z"
+  }
+]

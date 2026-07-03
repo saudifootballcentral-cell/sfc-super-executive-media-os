@@ -1,0 +1,7 @@
+{
+  "stage": "spec_json",
+  "status": "pass",
+  "note": "Moments_VerticalSlice.json: every asset has route + poly budget",
+  "criteria": "Assets/GameSpecs/<Game>.json complete — every asset has route + poly budget",
+  "ts": "2026-07-03T02:44:48Z"
+}
