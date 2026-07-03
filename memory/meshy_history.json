@@ -258,5 +258,13 @@
     "status": "started",
     "source": "projects/moments/concept/refs/crop_nova_gameplay.png",
     "ts": "2026-07-03T19:50:36Z"
+  },
+  {
+    "name": "Nova2_img",
+    "task_id": "019f2988-6750-7ae5-a8ff-b6262a55e98d",
+    "kind": "image-to-3d",
+    "status": "SUCCEEDED",
+    "glb": "projects/moments/meshy/Nova2_img.glb",
+    "ts": "2026-07-03T19:54:03Z"
   }
 ]

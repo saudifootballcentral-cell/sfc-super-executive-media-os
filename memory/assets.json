@@ -172,5 +172,18 @@
     "source": "official reference pair",
     "note": "CANON v2 — supersedes any text-to-3d version",
     "ts": "2026-07-03T19:49:11Z"
+  },
+  {
+    "name": "Nova",
+    "route": "meshy-image-to-3d",
+    "canon": true,
+    "rigged": true,
+    "mecanim": true,
+    "tris": 15000,
+    "path": "projects/moments/exports/Nova.fbx",
+    "meshy_task_id": "019f2988-6750-7ae5-a8ff-b6262a55e98d",
+    "source": "official reference pair",
+    "note": "CANON v2 — roster complete 8/8",
+    "ts": "2026-07-03T19:54:39Z"
   }
 ]
