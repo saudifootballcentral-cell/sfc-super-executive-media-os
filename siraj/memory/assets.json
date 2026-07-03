@@ -1,0 +1,197 @@
+[
+  {
+    "name": "IceTile_Solid",
+    "route": "procedural",
+    "tris": 20,
+    "path": "projects/moments/exports/IceTile_Solid.fbx",
+    "ts": "2026-07-03T02:56:35Z"
+  },
+  {
+    "name": "IceTile_Cracked",
+    "route": "procedural",
+    "tris": 56,
+    "path": "projects/moments/exports/IceTile_Cracked.fbx",
+    "ts": "2026-07-03T02:56:35Z"
+  },
+  {
+    "name": "IceTile_Breaking",
+    "route": "procedural",
+    "tris": 48,
+    "path": "projects/moments/exports/IceTile_Breaking.fbx",
+    "ts": "2026-07-03T02:56:35Z"
+  },
+  {
+    "name": "ArenaRim_COL",
+    "route": "procedural",
+    "tris": 336,
+    "path": "projects/moments/exports/ArenaRim_COL.fbx",
+    "ts": "2026-07-03T02:56:35Z"
+  },
+  {
+    "name": "Iceberg_A",
+    "route": "procedural",
+    "tris": 176,
+    "path": "projects/moments/exports/Iceberg_A.fbx",
+    "ts": "2026-07-03T02:56:35Z"
+  },
+  {
+    "name": "Iceberg_B",
+    "route": "procedural",
+    "tris": 176,
+    "path": "projects/moments/exports/Iceberg_B.fbx",
+    "ts": "2026-07-03T02:56:35Z"
+  },
+  {
+    "name": "Byte",
+    "route": "meshy",
+    "tris": 15000,
+    "rigged": true,
+    "mecanim": true,
+    "path": "projects/moments/exports/Byte.fbx",
+    "meshy_task_id": "019f281d-eab4-7a62-a0a9-36bb552a5a62",
+    "note": "FIRST HERO THROUGH THE FULL TRIANGLE in-session",
+    "ts": "2026-07-03T19:20:05Z"
+  },
+  {
+    "name": "Nova",
+    "route": "meshy",
+    "tris": 15000,
+    "rigged": true,
+    "mecanim": true,
+    "path": "projects/moments/exports/Nova.fbx",
+    "meshy_task_id": "019f2969-2d6d-7363-9a0a-657dc786e434",
+    "ts": "2026-07-03T19:22:14Z"
+  },
+  {
+    "name": "Orbit",
+    "route": "meshy",
+    "tris": 15000,
+    "rigged": true,
+    "mecanim": true,
+    "path": "projects/moments/exports/Orbit.fbx",
+    "meshy_task_id": "019f296c-37b7-7bd9-a5b9-5562e0080c8f",
+    "ts": "2026-07-03T19:22:27Z"
+  },
+  {
+    "name": "Pop",
+    "route": "meshy",
+    "tris": 15000,
+    "rigged": true,
+    "mecanim": true,
+    "path": "projects/moments/exports/Pop.fbx",
+    "meshy_task_id": "019f296c-3d4a-7bda-b023-bec137c8c12d",
+    "ts": "2026-07-03T19:22:28Z"
+  },
+  {
+    "name": "Byte",
+    "route": "meshy-image-to-3d",
+    "canon": true,
+    "rigged": true,
+    "mecanim": true,
+    "tris": 15000,
+    "path": "projects/moments/exports/Byte.fbx",
+    "meshy_task_id": "019f2978-9973-7e8b-8a94-003e5196006c",
+    "source": "official reference pair",
+    "note": "CANON v2 — supersedes any text-to-3d version",
+    "ts": "2026-07-03T19:49:11Z"
+  },
+  {
+    "name": "Orbit",
+    "route": "meshy-image-to-3d",
+    "canon": true,
+    "rigged": true,
+    "mecanim": true,
+    "tris": 15000,
+    "path": "projects/moments/exports/Orbit.fbx",
+    "meshy_task_id": "019f2978-9d79-77a6-8224-992809695665",
+    "source": "official reference pair",
+    "note": "CANON v2 — supersedes any text-to-3d version",
+    "ts": "2026-07-03T19:49:11Z"
+  },
+  {
+    "name": "Pop",
+    "route": "meshy-image-to-3d",
+    "canon": true,
+    "rigged": true,
+    "mecanim": true,
+    "tris": 15000,
+    "path": "projects/moments/exports/Pop.fbx",
+    "meshy_task_id": "019f2978-a34f-725e-8ef1-222f9b9bedf0",
+    "source": "official reference pair",
+    "note": "CANON v2 — supersedes any text-to-3d version",
+    "ts": "2026-07-03T19:49:11Z"
+  },
+  {
+    "name": "Striker",
+    "route": "meshy-image-to-3d",
+    "canon": true,
+    "rigged": true,
+    "mecanim": true,
+    "tris": 15000,
+    "path": "projects/moments/exports/Striker.fbx",
+    "meshy_task_id": "019f2978-a8d7-7e8e-b914-af7e9e11064a",
+    "source": "official reference pair",
+    "note": "CANON v2 — supersedes any text-to-3d version",
+    "ts": "2026-07-03T19:49:11Z"
+  },
+  {
+    "name": "Sizzle",
+    "route": "meshy-image-to-3d",
+    "canon": true,
+    "rigged": true,
+    "mecanim": true,
+    "tris": 15000,
+    "path": "projects/moments/exports/Sizzle.fbx",
+    "meshy_task_id": "019f2978-ab2e-7e8e-83b8-efbe25528b66",
+    "source": "official reference pair",
+    "note": "CANON v2 — supersedes any text-to-3d version",
+    "ts": "2026-07-03T19:49:11Z"
+  },
+  {
+    "name": "Shade",
+    "route": "meshy-image-to-3d",
+    "canon": true,
+    "rigged": true,
+    "mecanim": true,
+    "tris": 15000,
+    "path": "projects/moments/exports/Shade.fbx",
+    "meshy_task_id": "019f2978-b1c6-7a9e-b78b-7a19801ac07d",
+    "source": "official reference pair",
+    "note": "CANON v2 — supersedes any text-to-3d version",
+    "ts": "2026-07-03T19:49:11Z"
+  },
+  {
+    "name": "Dusty",
+    "route": "meshy-image-to-3d",
+    "canon": true,
+    "rigged": true,
+    "mecanim": true,
+    "tris": 15000,
+    "path": "projects/moments/exports/Dusty.fbx",
+    "meshy_task_id": "019f2978-b4d0-7a9e-97e9-8e6438fe7006",
+    "source": "official reference pair",
+    "note": "CANON v2 — supersedes any text-to-3d version",
+    "ts": "2026-07-03T19:49:11Z"
+  },
+  {
+    "name": "Nova",
+    "route": "meshy-image-to-3d",
+    "canon": true,
+    "rigged": true,
+    "mecanim": true,
+    "tris": 15000,
+    "path": "projects/moments/exports/Nova.fbx",
+    "meshy_task_id": "019f2988-6750-7ae5-a8ff-b6262a55e98d",
+    "source": "official reference pair",
+    "note": "CANON v2 — roster complete 8/8",
+    "ts": "2026-07-03T19:54:39Z"
+  },
+  {
+    "name": "HeroAnimationSet",
+    "route": "procedural",
+    "clips": 11,
+    "path": "projects/moments/exports/HeroAnimationSet.fbx",
+    "note": "idle/ready/celebrate/lose/point/laugh/clap/shocked/dance/intro_pose/podium_pose on the shared Mecanim skeleton — retargets to all 8 heroes via Humanoid",
+    "ts": "2026-07-03T20:16:33Z"
+  }
+]

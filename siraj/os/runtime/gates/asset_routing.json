@@ -1,0 +1,7 @@
+{
+  "stage": "asset_routing",
+  "status": "pass",
+  "note": "12 assets routed and logged: 4 heroes + penguin=meshy, tiles/rim/icebergs/anims=procedural",
+  "criteria": "Every asset routed via asset_router.py; decisions logged",
+  "ts": "2026-07-03T02:45:19Z"
+}

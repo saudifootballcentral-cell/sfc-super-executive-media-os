@@ -1,0 +1,23 @@
+{
+  "id": "9c07c5c9ccb9",
+  "stage": "meshy_generation",
+  "title": "Generate Byte, Nova, Orbit, Pop via image-to-3d from key art",
+  "act_as": "concept-artist",
+  "priority": 9,
+  "payload": {
+    "blocked_on": "game server: MESHY_API_KEY + Blender + Unity",
+    "spec": "projects/moments/GameSpecs/Moments_VerticalSlice.json"
+  },
+  "attempts": 0,
+  "created": "2026-07-03T02:45:19Z",
+  "history": [
+    {
+      "ts": "2026-07-03T19:22:53Z",
+      "event": "dispatched"
+    },
+    {
+      "ts": "2026-07-03T19:22:53Z",
+      "event": "done"
+    }
+  ]
+}

@@ -1,0 +1,257 @@
+MOMENTS: Game Description Document
+
+1. Game Overview
+
+Moments is a fast-paced, highly interactive local multiplayer party game designed to be played
+
+on a shared screen (TV, PC, or Console) while players use their own smartphones as
+
+controllers. It eliminates the need for extra gamepads, making it instantly accessible for groups
+
+of 2 to 8 players.
+
+The game is structured as a series of chaotic, physics-based, and skill-driven mini-games.
+
+Players select unique characters with distinct abilities, compete across various dynamic arenas,
+
+and accumulate points to claim the ultimate victory on the final podium.
+
+2. Core Gameplay Loop
+
+The Moments experience is divided into five distinct phases, managed seamlessly by the
+SessionStateManager :
+
+1. Attract Mode: The game idles on a visually stunning screen displaying a QR code. Players
+
+scan the code to instantly join the room via their phone’s web browser.
+
+2. Lobby & Character Selection: Players enter their nicknames and select their heroes from
+a carousel on their phones. Their chosen 3D avatars instantly spawn on the TV screen.
+
+3. Mini-Game Roulette: The system randomly selects a mini-game. A brief “How to Play”
+
+screen appears, explaining the rules.
+
+4. Action Phase (The Mini-Game): The core gameplay occurs. Players use customized virtual
+
+controllers on their phones (joysticks, buttons, steering wheels) to compete.
+
+5. Results & Podium: After each round, scores are tallied and displayed. At the end of the
+
+session, the overall winner is crowned on a celebratory podium.
+
+3. The Heroes (Character Roster)
+
+Moments features a diverse roster of 8 distinct characters, each governed by the
+CharacterAbilitySystem . Every character possesses a unique combination of passive
+stats, dash abilities, weapon attacks, and a game-changing special ability.
+
+Hero
+
+Theme
+
+Strengths
+
+Special Ability
+
+Byte
+
+Tech Robot
+
+High fire rate, precise
+
+Overclock: Accelerates
+
+cooldowns by 50%
+
+Nova
+
+Cosmic Being
+
+Largest AoE, crowd
+
+Supernova: Massive explosive
+
+control
+
+pushback
+
+Sizzle
+
+Fiery Blaze
+
+High push force, fast
+
+Inferno: Doubles damage/force
+
+temporarily
+
+Dusty
+
+Earth
+
+Highest knockback
+
+Earthshake: Stuns and shakes
+
+Adventurer
+
+resistance
+
+all enemies
+
+Pop
+
+Explosive
+
+Unpredictable, bouncy
+
+Party Bomb: Huge colorful
+
+Candy
+
+explosion
+
+Shade
+
+Shadow Ninja
+
+Stealth, evasion
+
+Anti-gravity, floating
+
+Shadow Cloak: Becomes
+invisible & invincible
+
+Zero-G Zone: Lifts enemies
+helplessly
+
+Fastest movement
+speed
+
+Lightning Strike: Chained
+electric damage
+
+Orbit
+
+Striker
+
+Space
+Explorer
+
+Lightning
+Athlete
+
+4. The Mini-Games
+
+The game currently features 7 fully developed mini-games, each with unique mechanics, custom
+arenas, and dynamic hazards managed by the  ArenaHazardSystem .
+
+4.1. Polar Push
+
+Objective: Be the last player standing on a shrinking, slippery ice platform.
+
+Mechanics: Players push each other off the edge. The ice tiles randomly collapse over time.
+
+Dynamic Hazard: Blizzard Gust – Periodically pushes all players in a random direction.
+
+4.2. Tank Battle
+
+Objective: Destroy all enemy tanks to be the last survivor.
+
+Mechanics: Twin-stick shooter mechanics. Players navigate a desert arena and fire
+
+bouncing cannonballs.
+
+Dynamic Hazard: Artillery Strike – Target indicators appear before massive explosions rock
+
+the arena.
+
+4.3. Color Clash
+
+Objective: Paint the most floor tiles with your character’s color before time runs out.
+
+Mechanics: Walking over tiles paints them. Players can overwrite each other’s colors.
+
+Dynamic Hazard: Paint Cannon – Drops random massive paint bombs that overwrite large
+
+sections.
+
+4.4. Gravity Grab
+
+Objective: Collect the most floating orbs that match your color.
+
+Mechanics: Players navigate a low-gravity arena, jumping and floating to catch orbs while
+avoiding wrong colors.
+
+Dynamic Hazard: Gravity Inversion – Gravity suddenly reverses, sending players flying
+toward the ceiling.
+
+4.5. Bumper Blitz
+
+Objective: Complete 3 laps around a chaotic neon track first.
+
+Mechanics: Top-down racing with bumper-car physics. Players can ram each other off
+
+course.
+
+Dynamic Hazard: Electro Bumpers – Electrified zones appear, stunning anyone who
+touches them.
+
+4.6. Blink Shot
+
+Objective: Shoot the most moving targets before time expires.
+
+Mechanics: Precision aiming and shooting. Targets vary in point value and speed.
+
+Dynamic Hazard: EMP Pulse – An expanding ring temporarily disables all player abilities
+
+and weapons.
+
+4.7. Wave Rider
+
+Objective: Stay on your surfboard the longest while navigating turbulent waters.
+
+Mechanics: Players must balance and jump over obstacles on a procedurally generated
+ocean.
+
+Dynamic Hazard: Rogue Wave – A massive, unavoidable wave hits everyone, requiring
+
+perfect timing to survive.
+
+5. Smartphone Controller Technology
+
+The standout feature of Moments is its seamless “Phone-as-a-Controller” technology.
+
+No App Required: Players simply scan a QR code to join via their native mobile web
+browser.
+
+Dynamic Layouts: The phone UI ( phone-controller.html ) automatically morphs to fit
+the current mini-game. For example, it displays a steering wheel for Bumper Blitz and a
+dual-joystick layout for Tank Battle.
+
+Zero-Latency Networking: Built on a custom C# WebSocket server
+( MomentsWebSocketServer.cs ), it bypasses third-party cloud servers to deliver sub-
+50ms local network latency.
+
+Client-Side Prediction: The phone interface utilizes advanced input sequencing
+( lastProcessedInputSequence ) to predict movements locally, ensuring the joystick
+feels perfectly responsive even if the Wi-Fi fluctuates.
+
+6. Technical Pillars
+
+Unity Engine: Built in Unity 6000+ utilizing the Universal Render Pipeline (URP) for high-
+performance, vibrant graphics.
+
+Procedural Visuals: Extensive use of  VFXManager  and  PostProcessingManager
+ensures that explosions, dashes, and environmental effects are generated dynamically
+without heavy memory overhead.
+
+Dynamic Audio:  AudioManager  handles spatial 3D audio, procedural soundscapes, and
+mini-game-specific background tracks.
+
+Robust State Management: The entire game flow is decoupled and managed by
+SessionStateManager  and  ControllerGateway , ensuring no race conditions when
+players join, disconnect, or reconnect mid-game.
+
+

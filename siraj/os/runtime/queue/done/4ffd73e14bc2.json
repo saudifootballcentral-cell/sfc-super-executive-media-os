@@ -1,0 +1,24 @@
+{
+  "id": "4ffd73e14bc2",
+  "stage": "game_idea",
+  "title": "Analyze Moments GDD and draft the Phase-1 development plan",
+  "act_as": "game-director",
+  "priority": 9,
+  "payload": {
+    "gdd": "siraj/projects/moments/gdd/",
+    "concept": "siraj/projects/moments/concept/",
+    "note": "full GDD provided - skip the 5 questions"
+  },
+  "attempts": 0,
+  "created": "2026-07-03T02:36:11Z",
+  "history": [
+    {
+      "ts": "2026-07-03T02:36:11Z",
+      "event": "dispatched"
+    },
+    {
+      "ts": "2026-07-03T02:42:42Z",
+      "event": "done"
+    }
+  ]
+}

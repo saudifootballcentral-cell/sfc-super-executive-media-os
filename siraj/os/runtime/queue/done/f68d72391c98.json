@@ -1,0 +1,20 @@
+{
+  "id": "f68d72391c98",
+  "stage": "tech_spec",
+  "title": "Vertical slice technical spec",
+  "act_as": "technical-director",
+  "priority": 9,
+  "payload": {},
+  "attempts": 0,
+  "created": "2026-07-03T02:43:33Z",
+  "history": [
+    {
+      "ts": "2026-07-03T02:43:33Z",
+      "event": "dispatched"
+    },
+    {
+      "ts": "2026-07-03T02:44:17Z",
+      "event": "done"
+    }
+  ]
+}

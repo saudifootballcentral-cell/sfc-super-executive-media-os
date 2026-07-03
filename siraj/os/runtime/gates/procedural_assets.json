@@ -1,0 +1,7 @@
+{
+  "stage": "procedural_assets",
+  "status": "pass",
+  "note": "6 procedural FBX in exports/ (tiles x3, rim+col, icebergs x2), all under budget",
+  "criteria": "All procedural assets exported from Blender",
+  "ts": "2026-07-03T19:22:54Z"
+}

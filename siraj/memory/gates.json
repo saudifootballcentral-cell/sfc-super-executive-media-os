@@ -1,0 +1,65 @@
+[
+  {
+    "stage": "game_idea",
+    "status": "pass",
+    "note": "Creative Director approved plan + 3 rulings (see decisions log)",
+    "criteria": "Idea analyzed; development plan approved by Creative Director",
+    "ts": "2026-07-03T02:42:42Z"
+  },
+  {
+    "stage": "gdd",
+    "status": "pass",
+    "note": "VERTICAL_SLICE_GDD.md consolidated; rulings embedded; internally consistent",
+    "criteria": "GDD written and internally consistent",
+    "ts": "2026-07-03T02:43:33Z"
+  },
+  {
+    "stage": "tech_spec",
+    "status": "pass",
+    "note": "TECH_SPEC.md: systems, netcode, budgets, test plan, risks",
+    "criteria": "Technical spec: systems, risks, platform targets",
+    "ts": "2026-07-03T02:44:17Z"
+  },
+  {
+    "stage": "spec_json",
+    "status": "pass",
+    "note": "Moments_VerticalSlice.json: every asset has route + poly budget",
+    "criteria": "Assets/GameSpecs/<Game>.json complete — every asset has route + poly budget",
+    "ts": "2026-07-03T02:44:48Z"
+  },
+  {
+    "stage": "asset_routing",
+    "status": "pass",
+    "note": "12 assets routed and logged: 4 heroes + penguin=meshy, tiles/rim/icebergs/anims=procedural",
+    "criteria": "Every asset routed via asset_router.py; decisions logged",
+    "ts": "2026-07-03T02:45:19Z"
+  },
+  {
+    "stage": "meshy_generation",
+    "status": "pass",
+    "note": "4/4 hero GLBs generated+refined (preview QA before refine spend); Penguin polish-only per spec",
+    "criteria": "All Meshy GLBs downloaded (preview approved before refine)",
+    "ts": "2026-07-03T19:22:54Z"
+  },
+  {
+    "stage": "procedural_assets",
+    "status": "pass",
+    "note": "6 procedural FBX in exports/ (tiles x3, rim+col, icebergs x2), all under budget",
+    "criteria": "All procedural assets exported from Blender",
+    "ts": "2026-07-03T19:22:54Z"
+  },
+  {
+    "stage": "asset_refine",
+    "status": "pass",
+    "note": "every asset through meshy_refine/task scripts: grounded pivot, budget decimation, Unity axes",
+    "criteria": "Every asset through Blender refine: pivot, decimate to budget, FBX",
+    "ts": "2026-07-03T19:22:54Z"
+  },
+  {
+    "stage": "rigging_animation",
+    "status": "pass",
+    "note": "8/8 heroes rigged (Mecanim names) + 11-clip HeroAnimationSet.fbx on identical skeleton; in-Unity Humanoid retarget verification lands at unity_import per pipeline",
+    "criteria": "Characters rigged (Mecanim names) + animation set retargets",
+    "ts": "2026-07-03T20:16:33Z"
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "event": "balance_check",
+    "remaining": 1530,
+    "floor": 100,
+    "note": "after Byte preview (started at 1550)",
+    "ts": "2026-07-03T19:16:16Z"
+  },
+  {
+    "event": "balance_check",
+    "remaining": 1430,
+    "floor": 100,
+    "note": "after full roster: 4 previews + 4 refines",
+    "ts": "2026-07-03T19:22:54Z"
+  },
+  {
+    "event": "balance_check",
+    "remaining": 1190,
+    "floor": 100,
+    "note": "after 7-hero official image-to-3d batch + orbit crop pilot",
+    "ts": "2026-07-03T19:38:03Z"
+  }
+]
