@@ -98,5 +98,29 @@
     "status": "started",
     "preview_task": "019f2969-33ca-77e6-b11e-a2c517e70d27",
     "ts": "2026-07-03T19:19:47Z"
+  },
+  {
+    "name": "Nova",
+    "task_id": "019f296c-3331-7416-952b-d8cf07acec03",
+    "kind": "text-to-3d-refine",
+    "status": "SUCCEEDED",
+    "glb": "projects/moments/meshy/Nova.glb",
+    "ts": "2026-07-03T19:21:28Z"
+  },
+  {
+    "name": "Orbit",
+    "task_id": "019f296c-37b7-7bd9-a5b9-5562e0080c8f",
+    "kind": "text-to-3d-refine",
+    "status": "SUCCEEDED",
+    "glb": "projects/moments/meshy/Orbit.glb",
+    "ts": "2026-07-03T19:21:29Z"
+  },
+  {
+    "name": "Pop",
+    "task_id": "019f296c-3d4a-7bda-b023-bec137c8c12d",
+    "kind": "text-to-3d-refine",
+    "status": "SUCCEEDED",
+    "glb": "projects/moments/meshy/Pop.glb",
+    "ts": "2026-07-03T19:21:31Z"
   }
 ]
