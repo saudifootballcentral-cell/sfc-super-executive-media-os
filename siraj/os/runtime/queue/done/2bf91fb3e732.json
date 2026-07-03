@@ -1,0 +1,20 @@
+{
+  "id": "2bf91fb3e732",
+  "stage": "spec_json",
+  "title": "GameSpecs JSON for the slice",
+  "act_as": "game-designer",
+  "priority": 9,
+  "payload": {},
+  "attempts": 0,
+  "created": "2026-07-03T02:44:17Z",
+  "history": [
+    {
+      "ts": "2026-07-03T02:44:17Z",
+      "event": "dispatched"
+    },
+    {
+      "ts": "2026-07-03T02:44:48Z",
+      "event": "done"
+    }
+  ]
+}

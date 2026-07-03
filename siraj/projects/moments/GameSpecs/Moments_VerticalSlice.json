@@ -1,0 +1,59 @@
+{
+  "gameName": "Moments",
+  "milestone": "vertical_slice",
+  "genre": "party-local-multiplayer",
+  "players": { "min": 2, "max": 8, "botsFillTo": 4 },
+  "platformHost": ["AndroidTV", "PC"],
+  "controller": "phone-web-qr",
+  "camera": { "mode": "ArenaOrbit", "finalDuel": { "zoom": true, "slowMo": 0.4 } },
+  "roundSeconds": 120,
+  "winCondition": "last hero standing (placement points feed podium)",
+  "miniGames": [
+    {
+      "id": "polar_push",
+      "scene": "TV_Play_PolarPush",
+      "controllerLayout": "show_joystick",
+      "hazards": [{ "id": "blizzard_gust", "telegraphSeconds": 2, "durationSeconds": 3 }],
+      "finalDuel": true
+    }
+  ],
+  "characters": [
+    { "name": "Byte",  "route": "meshy", "meshyKind": "image-to-3d", "concept": "concept/keyart_color_clash.png", "colorHex": "#00BFFF", "rig": true, "polyBudget": 15000 },
+    { "name": "Nova",  "route": "meshy", "meshyKind": "image-to-3d", "concept": "concept/keyart_gravity_grab.png", "colorHex": "#FFD700", "rig": true, "polyBudget": 15000 },
+    { "name": "Orbit", "route": "meshy", "meshyKind": "image-to-3d", "concept": "concept/keyart_gravity_grab.png", "colorHex": "#00BFBF", "rig": true, "polyBudget": 15000 },
+    { "name": "Pop",   "route": "meshy", "meshyKind": "image-to-3d", "concept": "concept/keyart_wave_rider.png", "colorHex": "#FF3399", "rig": true, "polyBudget": 15000 }
+  ],
+  "charactersDeferredToAlpha": ["Striker", "Sizzle", "Shade", "Dusty"],
+  "arena": [
+    { "name": "IceTile_Solid",    "route": "procedural", "task": "tasks/ice_tiles.py", "exactDims": true, "polyBudget": 400 },
+    { "name": "IceTile_Cracked",  "route": "procedural", "task": "tasks/ice_tiles.py", "exactDims": true, "polyBudget": 600 },
+    { "name": "IceTile_Breaking", "route": "procedural", "task": "tasks/ice_tiles.py", "exactDims": true, "polyBudget": 800 },
+    { "name": "ArenaRim_COL",     "route": "procedural", "task": "tasks/arena_rim.py", "exactDims": true, "polyBudget": 2000 },
+    { "name": "Iceberg_A",        "route": "procedural", "task": "tasks/icebergs.py",  "exactDims": false, "polyBudget": 1500 },
+    { "name": "Iceberg_B",        "route": "procedural", "task": "tasks/icebergs.py",  "exactDims": false, "polyBudget": 1500 }
+  ],
+  "arenaPolyBudgetTotal": 30000,
+  "props": [
+    { "name": "Penguin", "route": "meshy", "meshyKind": "text-to-3d", "prompt": "cute tiny penguin, low poly, game asset, clean topology, toy-like", "polyBudget": 3000, "priority": "polish-only", "deferrable": true }
+  ],
+  "animations": { "route": "procedural", "library": "animation_library", "rig": "mecanim-shared",
+    "clips": ["idle", "ready", "celebrate", "lose", "point", "laugh", "clap", "shocked", "dance", "intro_pose", "podium_pose"] },
+  "vfx": { "route": "unity-procedural", "items": ["dash_trail", "hit_spark", "ice_crack_decal", "blizzard_particles", "confetti"] },
+  "systems": [
+    "SessionStateManager", "PlayerRegistry", "ControllerGateway",
+    "PhoneControllerServer", "MomentsWebSocketServer",
+    "CharacterDefinition", "CharacterAbilitySystem(dormant)",
+    "MiniGameBase", "PolarPushGame", "IcePlatformManager",
+    "ArenaHazardSystem", "BotController", "HUDManager",
+    "ResultsAggregator", "VFXManager", "AudioManager"
+  ],
+  "heroStats": { "identicalInSlice": true, "dash": { "cooldownSeconds": 1.5, "universal": true } },
+  "localization": ["ar", "en"],
+  "acceptance": [
+    "bots-only full round completes, win fires",
+    "1 phone + 3 bots full round on LAN",
+    "disconnect -> bot takeover -> rescan reclaim",
+    "zero console errors/warnings",
+    "60fps sustained incl. Final Duel"
+  ]
+}
