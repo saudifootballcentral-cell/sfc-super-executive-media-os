@@ -1,0 +1,20 @@
+{
+  "id": "baa0808473ea",
+  "stage": "asset_refine",
+  "title": "Blender refine all assets (done: decimate+pivot+FBX)",
+  "act_as": "asset-director",
+  "priority": 9,
+  "payload": {},
+  "attempts": 0,
+  "created": "2026-07-03T19:22:54Z",
+  "history": [
+    {
+      "ts": "2026-07-03T19:22:54Z",
+      "event": "dispatched"
+    },
+    {
+      "ts": "2026-07-03T19:22:54Z",
+      "event": "done"
+    }
+  ]
+}

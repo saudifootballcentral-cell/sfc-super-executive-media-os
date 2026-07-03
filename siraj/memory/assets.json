@@ -51,5 +51,35 @@
     "meshy_task_id": "019f281d-eab4-7a62-a0a9-36bb552a5a62",
     "note": "FIRST HERO THROUGH THE FULL TRIANGLE in-session",
     "ts": "2026-07-03T19:20:05Z"
+  },
+  {
+    "name": "Nova",
+    "route": "meshy",
+    "tris": 15000,
+    "rigged": true,
+    "mecanim": true,
+    "path": "projects/moments/exports/Nova.fbx",
+    "meshy_task_id": "019f2969-2d6d-7363-9a0a-657dc786e434",
+    "ts": "2026-07-03T19:22:14Z"
+  },
+  {
+    "name": "Orbit",
+    "route": "meshy",
+    "tris": 15000,
+    "rigged": true,
+    "mecanim": true,
+    "path": "projects/moments/exports/Orbit.fbx",
+    "meshy_task_id": "019f296c-37b7-7bd9-a5b9-5562e0080c8f",
+    "ts": "2026-07-03T19:22:27Z"
+  },
+  {
+    "name": "Pop",
+    "route": "meshy",
+    "tris": 15000,
+    "rigged": true,
+    "mecanim": true,
+    "path": "projects/moments/exports/Pop.fbx",
+    "meshy_task_id": "019f296c-3d4a-7bda-b023-bec137c8c12d",
+    "ts": "2026-07-03T19:22:28Z"
   }
 ]

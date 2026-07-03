@@ -1,0 +1,20 @@
+{
+  "id": "e368fe19ceca",
+  "stage": "procedural_assets",
+  "title": "Arena set (prebuilt: 6 FBX)",
+  "act_as": "environment-artist",
+  "priority": 9,
+  "payload": {},
+  "attempts": 0,
+  "created": "2026-07-03T19:22:54Z",
+  "history": [
+    {
+      "ts": "2026-07-03T19:22:54Z",
+      "event": "dispatched"
+    },
+    {
+      "ts": "2026-07-03T19:22:54Z",
+      "event": "done"
+    }
+  ]
+}

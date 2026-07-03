@@ -1,0 +1,7 @@
+{
+  "stage": "meshy_generation",
+  "status": "pass",
+  "note": "4/4 hero GLBs generated+refined (preview QA before refine spend); Penguin polish-only per spec",
+  "criteria": "All Meshy GLBs downloaded (preview approved before refine)",
+  "ts": "2026-07-03T19:22:54Z"
+}
