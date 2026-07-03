@@ -1,0 +1,447 @@
+MOMENTS: Game Design Document
+(GDD)
+
+Version: 1.0.0 Platform: Android TV, PC, Console (Host) / Smartphones (Controllers) Genre:
+
+Local Multiplayer Party Game
+
+1. Executive Summary
+
+“Moments” is a high-energy, physics-based local multiplayer party game designed to bring
+
+people together in the same room. The game leverages an innovative “Phone-as-a-Controller”
+
+architecture, allowing 2 to 8 players to instantly join the action using their smartphones without
+
+needing to download an app. By combining the accessibility of Jackbox Games with the fast-
+
+paced, skill-based chaos of Fall Guys or Mario Party, Moments delivers a seamless, zero-friction
+
+multiplayer experience.
+
+1.1. Core Design Pillars
+
+1. Zero-Friction Onboarding: Players scan a QR code on the main screen to instantly join the
+game via their phone’s web browser. No apps, no Bluetooth pairing, and no extra gamepads
+
+are required.
+
+2. Dynamic Adaptation: The phone’s user interface dynamically morphs to fit the mechanics
+of the current mini-game (e.g., a steering wheel for racing, a dual-joystick for shooting).
+
+3. Hero-Based Gameplay: Unlike typical party games where characters are purely cosmetic,
+Moments features 8 distinct heroes with unique stats, abilities, and physics interactions,
+
+adding a layer of strategic depth.
+
+4. Procedural Polish: Heavy reliance on procedural visual effects (VFX) and dynamic audio
+
+ensures the game looks and sounds like a AAA title while maintaining a minimal memory
+
+footprint.
+
+2. Game Flow & Session State
+
+The game operates on a highly structured state machine managed by
+SessionStateManager.cs , ensuring a robust flow even when players disconnect or
+reconnect.
+
+2.1. The Five Phases of Play
+
+Phase
+
+State ID
+
+Description
+
+1. Attract
+
+Phase.Attract
+
+The idle screen displaying the game logo, a
+
+Mode
+
+dynamic background, and a massive QR code. It
+
+invites players to scan and join.
+
+2. Lobby
+
+Phase.Lobby
+
+Players select their nicknames and heroes on their
+
+3. Mini-
+
+Game
+
+Load
+
+4. Action
+Phase
+
+Phase.MiniGame
+
+Phase.MiniGame
+
+phones. Their 3D avatars spawn on the TV. The
+
+host configures game settings (rounds, time limit)
+
+and starts the session.
+
+The  MiniGameLoader  selects a random game. A
+“How to Play” screen ( HowToPlayScreenUI )
+explains the rules for 8 seconds before transitioning
+to the arena.
+
+The core gameplay. The  HUDManager  tracks
+scores and time. The  ArenaHazardSystem
+introduces dynamic environmental events to
+escalate tension.
+
+5.
+Results &
+
+Podium
+
+Phase.Results /
+
+Podium
+
+Post-game scores are aggregated
+( ResultsAggregator.cs ). After the final round,
+players transition to the Podium scene where the
+overall champion is crowned.
+
+3. The Hero Roster (Character Design)
+
+Moments features 8 distinct characters. The  CharacterAbilitySystem  governs their physics
+and interactions. Each character possesses a unique set of passive multipliers, a dash ability, a
+weapon ability, and a special ultimate ability.
+
+3.1. Character Profiles
+
+1. BYTE (The Tech Robot)
+
+Theme: Precision and Technology (Neon Blue /  #00BFFF )
+
+Passive: Fire Rate Multiplier (1.2x)
+
+Abilities: Blink Dash (instant teleport), Plasma Burst (small AoE), Overclock (Special:
+
+Accelerates all cooldowns by 50% for 5s).
+
+2. NOVA (The Cosmic Being)
+
+Theme: Gravity and Space (Cosmic Yellow /  #FFD700 )
+
+Passive: Area of Effect (AoE) Bonus (1.4x)
+
+Abilities: Orbit Dash, Gravity Well, Supernova (Special: Massive AoE explosion pushing
+
+everyone away).
+
+3. SIZZLE (The Fiery Blaze)
+
+Theme: Aggression and Power (Fiery Orange /  #FF6600 )
+
+Passive: Push Force Multiplier (1.3x), Speed Multiplier (1.1x)
+
+Abilities: Flame Dash, Fire Bomb, Inferno (Special: Doubles damage and push force for
+4s).
+
+4. DUSTY (The Earth Adventurer)
+
+Theme: Resilience and Weight (Earthy Brown /  #996633 )
+
+Passive: Knockback Resistance (1.4x) - Hardest to push off edges.
+
+Abilities: Dust Cloud (vision obstruction), Boulder Toss, Earthshake (Special: Shakes the
+arena, stunning enemies).
+
+5. POP (The Explosive Candy)
+
+Theme: Unpredictable Fun (Neon Pink /  #FF3399 )
+
+Passive: Speed Multiplier (1.1x)
+
+Abilities: Bounce Dash, Confetti Cannon, Party Bomb (Special: Huge colorful explosion
+
+with chaotic knockback).
+
+6. SHADE (The Shadow Ninja)
+
+Theme: Stealth and Evasion (Deep Purple /  #8000CC )
+
+Passive: Speed Multiplier (1.2x)
+
+Abilities: Shadow Dash, Shuriken Spread, Shadow Cloak (Special: Becomes invisible and
+
+invincible for 3s).
+
+7. ORBIT (The Space Explorer)
+
+Theme: Anti-Gravity (Cyan /  #00BFBF )
+
+Passive: Knockback Resistance (1.2x)
+
+Abilities: Hover Dash, Anti-Grav Mine, Zero-G Zone (Special: Creates a zone lifting
+
+enemies helplessly into the air).
+
+8. STRIKER (The Lightning Athlete)
+
+Theme: Speed and Agility (Electric Green /  #99FF00 )
+
+Passive: Speed Multiplier (1.3x) - Fastest character in the game.
+
+Abilities: Lightning Dash, Static Shock, Lightning Strike (Special: Chained electric damage
+
+between close enemies).
+
+4. The Mini-Games & Dynamic Hazards
+
+Moments includes 7 fully playable mini-games, each inheriting from  MiniGameBase.cs . To
+ensure matches never feel repetitive, the  ArenaHazardSystem  introduces dynamic, game-
+altering events mid-match.
+
+4.1. Polar Push (Survival)
+
+Objective: Be the last player standing on a slippery, collapsing ice platform.
+
+Mechanics: Players push each other using their bodies or abilities. The
+IcePlatformManager  uses a Fisher-Yates shuffle to randomly select and drop outer ice
+tiles over time, shrinking the arena.
+
+Dynamic Hazard: Blizzard Gust — A sudden, massive wind force pushes all players in a
+
+random direction. Players must fight the wind to avoid falling off.
+
+4.2. Tank Battle (Combat)
+
+Objective: Destroy all enemy tanks.
+
+Mechanics: Twin-stick shooter mechanics. Cannonballs bounce off walls, requiring players
+
+to calculate angles.
+
+Dynamic Hazard: Artillery Strike — Red warning reticles appear on the ground. Two
+seconds later, massive explosions deal heavy damage and knockback to anyone caught in
+
+the blast radius.
+
+4.3. Color Clash (Territory Control)
+
+Objective: Paint the most floor tiles with your character’s color.
+
+Mechanics: Walking over a neutral or enemy tile converts it to the player’s color. High-
+
+speed characters (like Striker) have a distinct advantage here.
+
+Dynamic Hazard: Paint Cannon — Massive paint blobs fall from the sky, instantly
+
+overwriting large sections of the arena with random colors, forcing players to adapt their
+
+routes.
+
+4.4. Gravity Grab (Collection)
+
+Objective: Collect floating orbs that match your color while avoiding incorrect ones.
+
+Mechanics: The arena has reduced gravity, allowing for massive jumps and floaty
+
+movement.
+
+Dynamic Hazard: Gravity Inversion — Gravity suddenly reverses (pulling players toward
+the ceiling) for 3 seconds, completely disrupting movement and strategy.
+
+4.5. Bumper Blitz (Racing)
+
+Objective: Be the first to complete 3 laps around the neon track.
+
+Mechanics: Top-down racing with bumper-car physics. Players can ram each other into
+
+walls or off the optimal racing line.
+
+Dynamic Hazard: Electro Bumpers — Electrified zones spawn dynamically on the track.
+
+Touching them stuns the player’s car for 2 seconds.
+
+4.6. Blink Shot (Precision)
+
+Objective: Shoot the most moving targets before time expires.
+
+Mechanics: Players remain stationary but must aim quickly and precisely. Targets vary in
+speed and point value.
+
+Dynamic Hazard: EMP Pulse — An expanding electromagnetic ring sweeps the arena,
+
+temporarily disabling all player weapons and abilities for 5 seconds.
+
+4.7. Wave Rider (Balance & Survival)
+
+Objective: Stay on your surfboard the longest.
+
+Mechanics: The ocean is generated procedurally using Gerstner wave physics. Players
+must jump over obstacles and balance their boards.
+
+Dynamic Hazard: Rogue Wave — A massive, unavoidable wave sweeps across the screen,
+applying immense upward force. Players must time their jumps perfectly to survive.
+
+5. Smartphone Controller Architecture
+
+The most critical technical achievement of Moments is the seamless integration of smartphones
+
+as controllers, entirely bypassing the need for native apps or Bluetooth pairing.
+
+5.1. Network Topology
+
+The system utilizes a dual-server approach running locally on the host device (TV/PC):
+
+1. HTTP Server ( PhoneControllerServer.cs ): Serves the HTML/CSS/JS frontend
+
+( phone-controller.html ) to connecting phones.
+
+2. WebSocket Server ( MomentsWebSocketServer.cs ): Handles real-time, bi-directional
+
+communication between the phones and the Unity game engine.
+
+5.2. Client-Side Prediction & Anti-Lag
+
+To combat Wi-Fi latency and ensure joysticks feel responsive, the system implements Client-
+
+Side Prediction:
+
+The phone generates an  inputSequence  ID for every movement command sent.
+
+The Unity host processes the movement and broadcasts a  StateSnapshotMsg  back to all
+phones, including the  lastProcessedInputSequence .
+
+The phone compares its current state with the server’s state and smoothly interpolates the
+
+difference, eliminating visual stutter (rubber-banding) on the phone’s UI.
+
+5.3. Dynamic UI Commands
+
+The  ControllerGateway  sends  UICommand  messages to the phones to change their layout
+based on the active phase or mini-game:
+
+show_joystick : For games like Polar Push or Color Clash.
+
+show_twin_stick : For Tank Battle.
+
+show_steering : For Bumper Blitz.
+
+show_hazard_warning : Triggers screen flashes and vibrations (via the HTML5 Vibration
+API) on the phone when a dynamic hazard is about to occur.
+
+6. Art Direction & Procedural Visuals
+
+Moments employs a vibrant, stylized art direction optimized for high frame rates (60 FPS) on
+smart TVs and lower-end hardware. The Universal Render Pipeline (URP) is heavily utilized to
+
+achieve a polished look without the performance overhead of traditional AAA pipelines.
+
+6.1. Procedural VFX System
+
+Instead of relying entirely on heavy particle system prefabs, Moments uses a highly optimized
+VFXManager  that generates effects procedurally via coroutines.
+
+Electric Arcs ( FX_ElectricArc ): Used for eliminations and EMP hazards. Lines are
+drawn dynamically using  LineRenderer  with randomized offsets to simulate electricity.
+
+Speed Streaks ( FX_SpeedStreak ): Trail renderers attached to characters during dashes,
+dynamically colored based on the player’s assigned color.
+
+Hit Sparks ( FX_HitSpark ): Fast, expanding spheres that quickly fade alpha to simulate
+impacts, avoiding the overdraw of complex particle systems.
+
+6.2. Dynamic Arena Environments
+
+The  ArenaEnvironment  script dynamically transforms the base lighting and background
+elements based on the active mini-game, creating a distinct mood for each round:
+
+Polar Push: Cool blue ambient light, dense fog, and animated Aurora Borealis directional
+lights sweeping across the sky.
+
+Color Clash: Dark ambient lighting pierced by rotating neon spotlights and glowing pipes.
+
+Tank Battle: Warm, sandy fog with a harsh directional “Desert Sun” and a subtle heat-haze
+effect applied via a post-processing distortion material.
+
+7. Audio Design & Spatial Sound
+
+Audio in Moments is designed to provide immediate, satisfying feedback and enhance the
+chaotic party atmosphere. The  AudioManager  acts as a central hub for all sound events.
+
+7.1. Dynamic Soundscapes
+
+Each mini-game loads a specific ambient track that loops continuously, setting the scene before
+the music even begins (e.g., howling arctic winds for Polar Push, factory machinery hums for
+
+Color Clash).
+
+7.2. Procedural & Spatial SFX
+
+Sound effects are heavily spatialized. When a tank fires a cannonball, the sound originates from
+
+the tank’s 3D position, allowing players to instinctively react to threats off-screen. The system
+also supports procedural pitch-shifting to ensure repetitive sounds (like footsteps or rapid
+gunfire) do not cause ear fatigue.
+
+8. Technical Architecture & Performance
+
+The game is built with scalability and long-term stability in mind, addressing common pitfalls
+found in local multiplayer games.
+
+8.1. State Management & Null Safety
+
+The  SessionStateManager  is the single source of truth. By strictly controlling the  Phase
+enum, the game prevents race conditions (e.g., a player attempting to join while a mini-game is
+actively loading). Extensive null-checking and list-copying ( new List<>(players) ) are
+employed throughout the codebase to prevent  ConcurrentModificationException  errors
+when iterating over player lists during rapid join/leave events.
+
+8.2. Garbage Collection (GC) Optimization
+
+To maintain a stable 60 FPS, GC allocations in Update loops have been aggressively minimized.
+
+Caching: Dictionaries and lists used for scoring or physics calculations are cached and
+cleared rather than instantiated newly every frame.
+
+Network Throttling: Instead of broadcasting the game timer to phones every frame,
+updates are throttled and synchronized only at specific intervals (e.g., every 5 seconds or
+during critical events), massively reducing network overhead.
+
+9. Future Expansion & Roadmap
+
+The architecture of Moments is designed to be easily expandable. Adding new content requires
+minimal code refactoring due to the data-driven approach.
+
+9.1. Content Expansion
+
+New Characters: Created simply by duplicating a  CharacterDefinition
+ScriptableObject, assigning a new 3D model, and selecting abilities from the existing
+CharacterAbilitySystem  dropdowns.
+
+New Mini-Games: Implemented by inheriting from  MiniGameBase.cs . The core loop,
+scoring, and UI transitions are handled automatically by the base class.
+
+9.2. Planned Features (v2.0)
+
+1. Character Mastery (XP System): A progression system where playing specific characters
+
+unlocks cosmetic upgrades (e.g., High-Fidelity models) at Level 10.
+
+2. In-Game Shop: A marketplace accessible directly from the phone controller while waiting in
+
+the lobby, allowing players to purchase horizontal cosmetics (hats, custom VFX) using
+earned in-game currency.
+
+3. Cloud Save Persistence: Transitioning player profiles from local  PlayerPrefs  to a cloud
+
+database to retain progression across different host devices.
+
+

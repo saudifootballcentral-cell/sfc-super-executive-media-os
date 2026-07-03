@@ -1,0 +1,136 @@
+
+
+MOMENTS
+Character Design + Lobby Flow Pack
+TV as server • phones as controllers • QR join • pre-designed hero roster
+
+PurposeThis pack defines a launch-ready roster of stylized 3D characters, the QR-based join flow, and the TV/phone UX needed to make character selection readable, fast, and party-friendly inside Unity.
+
+1. Character System Vision
+All players join the same Moments session by scanning the TV QR code. On their phones they enter a nickname, browse a pre-designed roster, lock a character, and use that same character identity across the main lobby, mini-games, scoreboards, victory moments, and emotes.
+Characters are cosmetic-first. They do not change game balance. This keeps mini-games fair while still giving players ownership and attachment.
+Design target: readable from across a living room, expressive on a phone screen, simple enough for efficient Unity production, and premium enough to feel like a modern family party title.
+Design pillars
+Readability
+Personality
+Production efficiency
+Big head / compact body silhouette, bold color blocking, oversized props, face visible at TV distance.
+Each hero has a clear fantasy and one anchor prop so players can say “I am the chef” or “I am the astronaut.”
+Shared proportions, reusable shader stack, common rig family, modular accessories, animation set reused across the whole roster.
+2. Hero Roster - launch set
+
+Figure A. Launch roster mood sheet in the target 3D toy-like style.
+1. Byte - Arcade kid
+Signature read
+Red hoodie, cap, gamepad charm
+Personality / usage
+Default all-round hero used in marketing. Strong smile, quick victory poses, energetic footwork.
+Model + material notes
+Glow trim on hoodie, controller icon on chest, chunky sneakers.
+2. Nova - Young inventor
+Signature read
+Lab coat, oversized glasses, bright vials
+Personality / usage
+Smart and playful. Great fit for puzzle and color-capture screens. Uses gadget animations for ready/confirm.
+Model + material notes
+Translucent bottle props, clean white coat with pastel accents.
+3. Orbit - Mini astronaut
+Signature read
+Round helmet, utility patches, booster pack
+Personality / usage
+Calm explorer with buoyant jump cycles and floaty idle motion.
+Model + material notes
+Reflective visor, soft emissive backpack lights, stitched mission badges.
+4. Striker - Street football star
+Signature read
+Green sport kit, headband, ball prop
+Personality / usage
+Competitive and upbeat. Best for race intros, crowd chants, and fast emotes.
+Model + material notes
+Number decal, cloth motion on shorts, stylized cleats.
+5. Sizzle - Party chef
+Signature read
+Toque hat, spatula, burger tray
+Personality / usage
+Chaotic good energy. Big moustache, bold laugh, comedic taunts.
+Model + material notes
+Apron splatter detail, metal spatula, food-themed win effects.
+6. Shade - Purple ninja
+Signature read
+Wrapped scarf, kunai silhouette, stealth boots
+Personality / usage
+Confident, cool, sleek. Ideal for sharper silhouettes and dramatic hero lighting.
+Model + material notes
+Fabric ribbons, matte cloth, subtle metallic belt pieces.
+7. Dusty - Cowboy adventurer
+Signature read
+Star badge, hat, boots, red scarf
+Personality / usage
+Friendly western rogue with broad gestures and a strong victory pose.
+Model + material notes
+Leather materials, belt buckle shine, star sparks on select.
+8. Pop - Roller skater
+Signature read
+Bubblegum palette, pads, cup accessory
+Personality / usage
+Lighthearted social hero with bounce, spins, and selfie-style emotes.
+Model + material notes
+Glossy pads, candy palette, wheel glow on ready state.
+3. QR Join + Character Select Flow
+TV lobby shows the Moments logo, animated background, room status, and a large QR code with a short backup URL / room code beneath it.
+Player scans the QR code. The phone opens the web controller and binds to the active TV session using a one-time room token.
+Phone asks for nickname first so the TV can immediately display “joining…” cards while the player browses characters.
+Phone shows the hero carousel with large portrait, name, and one-line fantasy. Swiping changes hero. Tap selects. Hold confirms.
+TV updates live with each player card: avatar, name, ready ring, and lock icon. If a hero is already taken, the phone marks it unavailable unless duplicate mode is on.
+When everyone is ready, the TV transitions to a lineup moment with all locked heroes before the mini-game vote or intro countdown.
+Phone screen requirements
+Screen
+Primary goal
+Main controls
+Key UI
+Join
+Bind to session
+Open link / auto token
+Logo, room id, status pulse
+Nickname
+Identify player
+Text field + continue
+Large input, easy keyboard dismiss
+Character select
+Choose hero
+Swipe, tap, hold to ready
+Portrait, role line, taken badge
+Ready state
+Wait / change hero
+Unready button
+Locked hero art, player color, haptics
+4. TV Lobby Wireframe
+Recommended TV layoutTop center: Moments logo • Center: QR code and “Scan to join” • Lower third: player cards in a horizontal row • Bottom: host controls and room status. Background should stay animated but low contrast so the QR code remains easy to scan.
+[ Moments logo ]                 [ 2/8 players ready ]
+ 
+          [ LARGE QR CODE ]  scan to play moments
+  [Byte Ava Ready] [Nova Omar Joining] [Empty] [Empty] ...
+  Host: Start when all ready      Settings: duplicates on/off
+5. Character Production Specification
+Area
+Direction
+Model target
+Stylized 3D hero around 10k-18k triangles for the TV build. Shared body topology where possible.
+Texture strategy
+Single material set per hero where practical: body, face, props. Prefer clean gradients and hand-painted accents over noisy realism.
+Rig
+Shared humanoid rig with additive facial controls for blink, smile, surprise, angry, laugh. Keep compatibility with common emote set.
+Animation pack
+Idle, ready, celebrate, lose, point, laugh, clap, shocked, dance loop, mini-game intro pose, podium pose.
+Shader look
+Soft stylized PBR with bright key light response, subtle rim light, saturated albedo, and controlled specular highlights.
+LOD + optimization
+LOD0 for close-ups, LOD1 for gameplay, optional impostor or reduced mesh for far lobby crowd shots.
+6. Unity Implementation Notes
+Create a CharacterDefinition ScriptableObject containing hero id, display name, short fantasy line, rarity tag if used later, portrait sprite, 3D prefab reference, voice pack, emote list, and lock state color.
+The TV lobby subscribes to session events: playerJoined, nicknameUpdated, heroHovered, heroLocked, playerReady, playerDisconnected, playerReconnected.
+The phone controller uses a lightweight responsive web UI so QR scan friction stays low. Character portraits can be streamed or bundled as optimized WebP / PNG assets.
+Keep all character data authoritative on the TV host. Phones send intent only: hover hero, lock hero, unlock hero, ready.
+Appendix - Overall moments style target
+
+Figure B. Main menu and mini-game style target for the broader Moments package.

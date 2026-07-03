@@ -1,0 +1,490 @@
+MOMENTS
+
+Game Description Document
+Version 2.0 | Complete Feature Edition
+
+12 Mini-Games  (cid:127)  8 Heroes  (cid:127)  Phone-as-a-Controller  (cid:127)  2–8 Players
+
+Platform: Android TV / PC / Console (Host) — Smartphones (Controllers)
+
+1. Game Overview
+Moments is a fast-paced, highly interactive local multiplayer party game played on a shared screen (TV, PC, or
+Console) while players use their own smartphones as controllers. It eliminates the need for extra gamepads,
+making it instantly accessible for groups of 2 to 8 players — with AI bots filling empty slots so even two players
+experience full-room chaos.
+
+Version 2.0 expands the game from 7 to 12 mini-games, layers a universal power-up framework, team and
+tournament modes, a progression system (Character Mastery and the seasonal Party Pass), and a
+presentation overhaul — dynamic camera direction, kill-cam replays, a bilingual announcer (Arabic / English), and
+a consistent hazard-telegraph language — bringing the experience to a professional, commercially competitive
+standard.
+
+2. Core Gameplay Loop
+The Moments experience is divided into five phases, managed seamlessly by the SessionStateManager:
+
+(cid:127) Attract Mode: The game idles on a visually stunning screen displaying a QR code. Players scan it to instantly
+
+join via their phone's web browser.
+
+(cid:127) Lobby & Character Selection: Players enter nicknames and select heroes from a carousel on their phones;
+
+3D avatars spawn on the TV. The host chooses a session format and optional mutators.
+
+(cid:127) Mini-Game Roulette: The system selects a mini-game (random or playlist). A brief 'How to Play' screen
+
+explains the rules.
+
+(cid:127) Action Phase: Core gameplay with power-ups, dynamic hazards, and adaptive music. Eliminated players stay
+
+engaged through phone spectator mode and Crowd Chaos hazard voting.
+
+(cid:127) Results & Podium: A kill-cam highlight replay, a Bonus Awards ceremony (Most Aggressive, Survivor,
+
+Comeback King...), then scores. After the final round, the champion is crowned on a celebratory podium with
+per-character victory choreography and a shareable result card.
+
+Session Formats: Quick Party (3 games), Full Party (7), Marathon (all 12), Gauntlet (best-of-5 on one game),
+Team Mode (2v2 / 4v4), and Tournament Bracket (8 players, semifinals to final). The final round is always worth
+double points so no one is ever out of the race.
+
+3. The Heroes (Character Roster)
+Moments features 8 distinct characters governed by the CharacterAbilitySystem. Every character combines
+passive stats, a dash, a weapon attack, and a game-changing special ability. With v2.0, each hero also earns
+Mastery XP, unlocking skins, trails, victory poses, and announcer lines up to a high-fidelity model at Level 10.
+
+Hero
+
+Byte
+
+Nova
+
+Sizzle
+
+Dusty
+
+Pop
+
+Theme
+
+Strengths
+
+Special Ability
+
+Tech Robot
+
+High fire rate, precise
+
+Overclock: Accelerates cooldowns by 50%
+
+Cosmic Being
+
+Largest AoE, crowd control
+
+Supernova: Massive explosive pushback
+
+Fiery Blaze
+
+High push force, fast
+
+Inferno: Doubles damage/force temporarily
+
+Earth Adventurer
+
+Highest knockback resistance
+
+Earthshake: Stuns and shakes all enemies
+
+Explosive Candy
+
+Unpredictable, bouncy
+
+Party Bomb: Huge colorful explosion
+
+Shade
+
+Shadow Ninja
+
+Stealth, evasion
+
+Shadow Cloak: Becomes invisible & invincible
+
+Orbit
+
+Space Explorer
+
+Anti-gravity, floating
+
+Zero-G Zone: Lifts enemies helplessly
+
+Striker
+
+Lightning Athlete
+
+Fastest movement speed
+
+Lightning Strike: Chained electric damage
+
+Hero identity now extends into every mini-game: in Tank Battle, hero passives map to tank traits (Byte reloads
+faster, Dusty carries heavier armor, Striker drives faster treads), making character choice strategic everywhere.
+
+MOMENTS — Game Description Document v2.0
+
+Page 1
+
+4. The Mini-Games (12 Arenas of Chaos)
+Each mini-game ships with multiple arena variants, at least two dynamic hazards driven by the
+ArenaHazardSystem, full power-up support, bot support, team scoring, and its own announcer lines and adaptive
+music layer.
+
+4.1 Polar Push — Survival
+
+Objective: Be the last player standing on a shrinking, slippery ice platform.
+
+Mechanics: Players push each other off the edge while ice tiles crack and collapse in three readable stages (solid,
+cracked, breaking).
+
+v2.0 Features:
+
+(cid:127) Grab & Throw: grapple a nearby opponent and hurl them; victims mash to escape.
+
+(cid:127) Power-up crates: Anchor Boots (knockback immunity), Ice Pick (crack a tile under an enemy), Snowball
+
+Launcher.
+
+(cid:127) Final Duel: with 2 players left, the arena shrinks to one platform with a camera zoom and slow-mo.
+
+(cid:127) Arena variants: Glacier Ring (donut), Iceberg Tilt (weight-based tilting), Frozen Lake (standing still breaks the
+
+ice).
+
+Dynamic Hazards:
+
+(cid:127) Blizzard Gust — wind pushes everyone in a random direction.
+
+(cid:127) Orca Breach — a whale bursts through, destroying tiles permanently.
+
+(cid:127) Freezing Fog — a slowing fog wall; caught players see frost on their phone screens.
+
+4.2 Tank Battle — Combat
+
+Objective: Destroy all enemy tanks to be the last survivor (or top the kill-streak board in Respawn Brawl).
+
+Mechanics: Twin-stick shooter with bouncing cannonballs and destructible, three-stage cover.
+
+v2.0 Features:
+
+(cid:127) Shell pickups: Bouncer (3 ricochets), Heavy (destroys cover), Cluster (splits in 3), Homing.
+
+(cid:127) Respawn Brawl variant: 90-second deathmatch with 3-second respawns — eliminated players never sit idle.
+
+(cid:127) Hero tank traits: passives carry into tank stats.
+
+(cid:127) Arena variants: Urban Ruins (ricochet corridors), Open Dunes, Factory (conveyor floors).
+
+Dynamic Hazards:
+
+(cid:127) Artillery Strike — warning reticles, then devastating explosions.
+
+(cid:127) Sandstorm — visibility shrinks to a radius; the phone minimap becomes vital.
+
+(cid:127) Supply Bombardment — shells and loot crates fall together: risk versus reward.
+
+4.3 Color Clash — Territory Control
+
+Objective: Paint the most floor tiles with your color before time runs out.
+
+Mechanics: Walking paints tiles; enclosing a full shape fills its interior instantly, rewarding clever routes over raw
+speed.
+
+v2.0 Features:
+
+(cid:127) Slip Streams: +15% speed on your color, -10% on enemy paint.
+
+(cid:127) Paint Roller power-up triples trail width; every player carries 2 throwable Paint Bombs.
+
+(cid:127) Team Mode: shared team colors in 2v2v2v2 or 4v4.
+
+Dynamic Hazards:
+
+(cid:127) Paint Cannon — giant blobs overwrite whole sections.
+
+MOMENTS — Game Description Document v2.0
+
+Page 2
+
+(cid:127) Color Drain — a wandering robot erases paint back to neutral.
+
+(cid:127) Disco Floor — the TV scrambles tile colors for 5 seconds; only your phone shows the true map.
+
+4.4 Gravity Grab — Collection
+
+Objective: Collect the most floating orbs matching your color.
+
+Mechanics: Low-gravity arena with floaty jumps; gravity wells let skilled players slingshot for speed.
+
+v2.0 Features:
+
+(cid:127) Orb tiers: Common (1pt), Rare (3pt), and one roaming Prism Orb (5pt).
+
+(cid:127) Steal mechanic: body-slam a rival to knock loose their last two orbs.
+
+(cid:127) Magnet power-up attracts matching orbs for 5 seconds.
+
+Dynamic Hazards:
+
+(cid:127) Gravity Inversion — gravity flips toward the ceiling for 3 seconds.
+
+(cid:127) Black Hole — pulls everyone inward; touching it scatters your orbs.
+
+(cid:127) Color Shuffle — target colors swap with a 3-second warning.
+
+4.5 Bumper Blitz — Racing
+
+Objective: Complete 3 laps of a chaotic neon track first — or survive Elimination Mode, where last place is
+knocked out every 20 seconds.
+
+Mechanics: Top-down bumper-car racing with drift-and-boost: hold drift to charge a mini-turbo, released on the
+phone's drift paddle.
+
+v2.0 Features:
+
+Item boxes: Shockwave, Oil Slick, Nitro, Shield.
+
+(cid:127) Catch-up design: trailing players get +8% speed and better item odds.
+
+(cid:127) Risky shortcuts with no guardrails; tilt-steering option via phone gyroscope.
+
+Dynamic Hazards:
+
+(cid:127) Electro Bumpers — electrified zones stun cars for 2 seconds.
+
+(cid:127) Track Rotation — a section physically rotates mid-race.
+
+(cid:127) Magnet Rail — a charged rail drags nearby cars toward the wall.
+
+4.6 Blink Shot — Precision
+
+Objective: Shoot the most moving targets before time expires.
+
+Mechanics: Precision aiming with phone gyroscope pointing (Wii-style) or touch-drag fallback.
+
+v2.0 Features:
+
+(cid:127) Target variety: armored (2 hits), ordered bonus chains, penalty targets, and steal targets that drain the leader.
+
+(cid:127) Weapon pickups: shotgun spread, rapid-fire, sniper (2x points at range).
+
+(cid:127) Golden Duel: the final 10 seconds spawn one 10-point golden target.
+
+Dynamic Hazards:
+
+(cid:127) EMP Pulse — an expanding ring disables weapons and abilities.
+
+(cid:127) Lights Out — targets visible only as silhouette flashes.
+
+(cid:127) Mirror Mode — aiming axes invert for 5 seconds, with fair warning.
+
+4.7 Wave Rider — Balance & Survival
+
+Objective: Stay on your surfboard the longest while racking up style points.
+
+MOMENTS — Game Description Document v2.0
+
+Page 3
+
+(cid:127)
+Mechanics: Procedural Gerstner-wave ocean; ride the wave face for speed, launch off crests for air.
+
+v2.0 Features:
+
+(cid:127) Trick system: swipe gestures mid-air score style bonuses — survival plus flair.
+
+(cid:127) Obstacle variety: buoys, crossing jet-skis, debris, steering-lock whirlpools, rail-grind dock sections.
+
+Dynamic Hazards:
+
+(cid:127) Rogue Wave — a massive wave demanding perfectly timed jumps.
+
+(cid:127) Lightning Storm — strike columns telegraphed by darkened water.
+
+(cid:127) Whirlpool Vortex — pulls everyone toward the center; paddle hard to escape.
+
+Five brand-new mini-games complete the roster:
+
+4.8 Sumo Stack — King of the Hill
+
+Objective: Hold the glowing zone to bank points; the zone relocates every 15 seconds.
+
+Mechanics: Pure push-and-shove physics with direct counter-play — every hero's knockback profile matters.
+
+Dynamic Hazards:
+
+(cid:127) Shifting Ground — the hill rises and tilts.
+
+(cid:127) Double Zone — two zones split the brawl.
+
+4.9 Bomb Relay — Hot Potato
+
+Objective: Don't be holding the bomb when it explodes.
+
+Mechanics: The bomb passes on contact. Its timer is hidden — only the holder's phone vibrates, faster and faster,
+as zero approaches. A genuine information game.
+
+Dynamic Hazards:
+
+(cid:127) Twin Bombs — two bombs in play at once.
+
+(cid:127) Reverse Tag — for 5 seconds the bomb must be kept, not passed.
+
+4.10 Heist Run — Asymmetric Stealth
+
+Objective: One secret Thief steals gems; everyone else hunts them.
+
+Mechanics: The Thief is invisible on the TV but sees themselves on their own phone map — private-screen
+gameplay impossible with normal gamepads. Roles rotate every round.
+
+Dynamic Hazards:
+
+(cid:127) Alarm Sweep — a scanning beam briefly reveals the Thief.
+
+(cid:127) Lockdown — doors close, shrinking the play space.
+
+4.11 Quiz Rush — Trivia + Action
+
+Objective: Answer by physically standing on the correct floor zone before time ends.
+
+Mechanics: Questions appear on the TV; A/B/C/D zones light the floor. Wrong-answer floors collapse. Knowledge
+meets shoving.
+
+Dynamic Hazards:
+
+(cid:127) Liar's Round — one fake answer zone is a trap for everyone.
+
+(cid:127) Speed Round — 5 rapid questions, shrinking timers.
+
+4.12 Rhythm Stomp — Music & Survival
+
+MOMENTS — Game Description Document v2.0
+
+Page 4
+
+Objective: Hit phone buttons in sync with on-screen music cues; the least accurate player takes knockback on a
+shrinking platform.
+
+Mechanics: Built on the dynamic audio system — every round can use a different procedural track.
+
+Dynamic Hazards:
+
+(cid:127) Tempo Spike — the beat suddenly doubles.
+
+(cid:127) Blackout Beat — cues vanish; players must keep rhythm by ear.
+
+MOMENTS — Game Description Document v2.0
+
+Page 5
+
+5. Universal Gameplay Systems
+Power-Up Framework: a shared, data-driven pickup system inherited by every mini-game. A spawn director
+subtly biases drops toward trailing players, and the phone shows the held power-up as a large tappable button.
+
+Comeback & Award Design: double-points final round, an optional Underdog Boost, and a Bonus Awards
+ceremony before the podium — Most Aggressive, Survivor, Comeback King, Pacifist — each worth points and
+tracked automatically by the MatchStatsRecorder.
+
+Mutators: host-selectable chaos toggles — Tiny Mode, Double Speed, Inverted Hazards, hazard intensity (Off /
+Normal / Chaos) — for endless replayability.
+
+AI Bots: three difficulty levels fill empty slots through the same input API as phones, also powering automated
+soak-testing.
+
+6. Smartphone Controller 2.0
+The standout feature of Moments remains its seamless Phone-as-a-Controller technology — no app, no pairing,
+just a QR scan — now expanded into a platform of its own:
+
+(cid:127) Dynamic layouts: the phone UI morphs per mini-game — steering wheel with drift paddle, twin-stick, gyro
+
+pointer, rhythm pads.
+
+(cid:127) Motion controls: gyroscope aiming (Blink Shot), tilt steering (Bumper Blitz), lean balance (Wave Rider), with
+
+one-tap calibration.
+
+(cid:127) Haptic language: distinct vibration grammar — hazard warning (3 short), elimination (long), power-up ready
+
+(double tap), hidden bomb timer pulses.
+
+(cid:127) Private information screens: your true map during Disco Floor, your secret role in Heist Run, your bomb timer
+
+in Bomb Relay — gameplay impossible on shared-screen gamepads.
+
+(cid:127) Emotes & soundboard: rate-limited taunts and character voice lines triggered from the phone.
+
+(cid:127) Spectator & Crowd Chaos: eliminated players watch a minimap and collectively vote one extra hazard per
+
+round.
+
+(cid:127) Zero-latency networking: custom C# WebSocket server with client-side prediction delivers sub-50ms local
+
+latency; a 10-second AI-takeover grace period covers disconnects.
+
+(cid:127) Controller accessibility: button scaling, left-handed layouts, high-contrast skin, reduced-vibration toggle.
+
+7. Presentation & Game Feel
+
+(cid:127) Dynamic Camera Director: automatic zooms and pans, slow-mo on final eliminations.
+
+(cid:127) Kill-Cam Replays: a 5-second highlight of each round's decisive moment.
+
+(cid:127) Announcer System: procedural commentary with anti-repetition logic, shipping with Arabic and English voice
+
+packs.
+
+(cid:127) Crowd audio, hit-stop and screen shake: dynamic cheering that swells with the action, plus 2–4 frame impact
+
+freezes.
+
+(cid:127) Adaptive music: intensity layers stack as timers run down or a final duel begins.
+
+(cid:127) Telegraph standard: every hazard follows the same grammar — phone vibration + flash, a 2-second TV
+
+warning, then the event. Consistency means fairness.
+
+(cid:127) Victory choreography: per-character podium animations, confetti and fireworks — and a shareable photo-card
+
+of the results.
+
+8. Progression & Retention
+Character Mastery: per-hero XP unlocks skins, trail colors, victory poses and announcer lines, with a high-fidelity
+model at Level 10. Party Pass: a seasonal, free cosmetic track tied to matches played — strictly no pay-to-win.
+Player profiles persist stats (wins, favorite hero, nemesis) locally with planned cloud sync, and an achievement
+system surfaces challenges on the phone. The auto-generated share card after every session doubles as built-in
+social marketing.
+
+MOMENTS — Game Description Document v2.0
+
+Page 6
+
+9. Technical Pillars
+
+(cid:127) Unity 6000+ / URP tuned for a stable 60 FPS on smart TVs and modest hardware.
+
+(cid:127) Procedural visuals: VFXManager and PostProcessingManager generate effects dynamically — electric arcs,
+
+speed streaks, hit sparks — with minimal memory overhead.
+
+(cid:127) Dynamic audio: spatial 3D sound, procedural pitch-shifting, per-arena ambient scapes.
+
+(cid:127) Robust state management: SessionStateManager and ControllerGateway prevent race conditions across
+
+joins, disconnects, and reconnections; GC allocations in update loops are aggressively minimized and network
+updates throttled.
+
+(cid:127) Data-driven content: heroes, hazards, power-ups, and mutators are ScriptableObjects — new content without
+
+code refactoring.
+
+MOMENTS — Game Description Document v2.0
+
+Page 7
+
+

@@ -1,0 +1,384 @@
+
+
+MOMENTS
+Master Game Design Bible
+TV-as-server party platform • phones as controllers • QR join • pre-designed character roster • Unity production reference
+
+Combined from the previous Moments concept, QR join update, character design pack, and Unity scene flow / wireframe pack.
+What this document is
+A single, detailed reference for product vision, mini-games, character roster, TV and phone UX, scene flow, wireframes, networking, Unity implementation, production roadmap, and first playable scope.
+
+Executive Overview
+Moments is a couch-first party game system in which the TV hosts the shared session and each player joins on a phone by scanning a QR code. The TV provides spectacle, camera, scoreboards, voting, and mini-game state. Phones provide zero-friction joining, character selection, ready confirmation, and context-specific controller layouts for each mini-game.
+• Core promise: anyone in the room can join in seconds without needing a traditional gamepad.
+• Product shape: one main game hub called Moments containing a set of fast, readable, stylized 3D mini-games.
+• Technology direction: Unity on the TV / host side, lightweight mobile web controller or companion app on the phone side.
+• Design rule: characters are cosmetic-first, not balance-defining, so the roster adds identity without unfair advantages.
+Document Map
+• 1. Product vision and experience pillars
+• 2. Session loop and scene flow
+• 3. TV-as-server system architecture
+• 4. QR join, lobby, and character select
+• 5. Character roster and production guidelines
+• 6. Mini-game lineup and controller patterns
+• 7. TV UX, phone UX, and wireframe notes
+• 8. Unity scenes, modules, and data model
+• 9. First playable scope and production roadmap
+• 10. Asset checklist, event map, and implementation notes
+
+1. Product Vision and Experience Pillars
+Moments should feel like a premium local multiplayer party game: instant to join, easy to read from the couch, funny even when players are losing, and energetic enough to turn a living room or event space into a shared showpiece. Every mini-game is framed as a vivid 3D "moment" - a tiny social challenge blown up into a toy-like arena.
+Dimension
+Direction
+Notes
+Audience
+Families, friends, events, cafes, lounges, casual players
+Supports players who may not own controllers or gaming hardware.
+Session length
+15 to 30 minutes for a full party round
+Each mini-game typically lasts 60 to 120 seconds.
+Join friction
+Near-zero
+Scan QR, enter nickname, choose character, press Ready.
+Presentation
+Readable spectacle on the TV
+Large typography, bold color identity, low clutter, clear win states.
+Art target
+High-quality stylized 3D
+Rounded forms, toy materials, premium lighting, strong silhouettes.
+Experience Pillars
+• Instant social entry: The room should convert from watching to playing in under ten seconds per person.
+• Readable chaos: Even at peak action the audience should understand who is winning, who got hit, and what the objective is.
+• Short-form variety: A full playlist should rotate through different mechanics so the game never feels like one repeated input pattern.
+• Character attachment: Players should quickly identify with a hero, color, and set of emotes that carry across the full session.
+• TV-first spectacle: The television is the center of gravity - hero shots, results screens, podiums, and reactions must feel celebratory.
+Core Design Rules
+• Characters do not alter balance in the launch version; they are cosmetic-first.
+• Every mini-game must teach its controls in a few seconds through TV instruction cards plus simplified phone input screens.
+• Any important state that affects the room - score, readiness, timer, elimination, vote result - belongs on the TV, not hidden only on phones.
+• Phone screens should never require dense text or multi-step interaction during active play.
+2. Session Loop and End-to-End Scene Flow
+The recommended party flow starts with an attract screen on the TV and ends with a podium celebration. The host device remains authoritative throughout. Each phone is effectively a client that sends intent and receives only the local UI state it needs.
+Scene key
+Stage
+Purpose
+TV_Boot
+Attract / idle hero loop
+Shows Moments logo, QR code, room code, and visual promise.
+TV_Join
+QR join active
+Phones scan and bind to session token; TV populates player cards live.
+TV_Lobby
+Character select and ready check
+Each player picks from the roster and locks in.
+TV_Vote
+Mini-game vote or random selection
+Can be playlist-based, vote-based, or host-driven.
+TV_Intro
+Rules card and countdown
+TV teaches objective; phone swaps to relevant control layout.
+TV_Play
+Mini-game gameplay
+Server-authoritative match with TV camera and scoreboard.
+TV_Results
+Round results
+Medals, standings, momentum animation, and next-round setup.
+TV_Finale
+Session podium
+Confetti, winner celebration, rematch, or return to attract.
+Scene flow principle
+The TV should always make the current state obvious from across the room, while the phone should only show the one thing the player needs right now: join, choose, ready, or control.
+3. TV-as-Server System Architecture
+The TV host runs the authoritative game session. It owns room creation, player slots, mini-game state, score aggregation, and scene orchestration. Phones do not simulate the full game. They connect to the active room, receive local UI state, and send compact input messages.
+Layer
+Responsibility
+Recommended implementation
+TV Host / Unity app
+Session authority, rendering, cameras, scoreboards, state machine
+Unity 6 + URP + Addressables + Cinemachine
+Controller transport
+Join handshake, low-latency input, reconnect
+WebSocket-based socket layer with session token
+Phone controller UI
+Join flow, hero select, ready, control layouts, haptics
+Responsive web app first; native wrapper optional later
+Game config/data
+Mini-game rules, roster data, playlists, event text
+ScriptableObjects and JSON-compatible payloads
+Telemetry / QA
+Match analytics, disconnects, completion, tuning
+Analytics events and device matrix testing
+Authority Model
+• The TV generates a unique room token and encodes it into the QR join URL.
+• Phones authenticate into the room with that token and receive an assigned player slot or a queued state if the room is full.
+• During gameplay, phones send intent only: move vector, tap, hold, steer, aim, fire, dash, or vote selection.
+• The TV validates and resolves all gameplay consequences, then broadcasts the resulting state to the room.
+• On disconnect, the host reserves the slot for a short grace window so the same player can reconnect without losing their character or score.
+Suggested Runtime Event Map
+Event
+Source
+Payload summary
+roomCreated
+TV
+roomCode, joinUrl, sessionToken, settings
+playerJoined
+Phone -&gt; TV
+nickname, deviceId, requested room token
+heroHovered
+Phone -&gt; TV
+playerId, heroId
+heroLocked
+Phone -&gt; TV
+playerId, heroId, ready state false
+playerReady
+Phone -&gt; TV
+playerId, ready true
+gameStateChanged
+TV
+scene key, timer, scores, active minigame
+controlLayoutAssigned
+TV -&gt; Phone
+layout type, prompts, haptic hints
+playerDisconnected
+Transport
+playerId, grace timer
+playerReconnected
+Transport
+playerId restored to prior slot
+sessionEnded
+TV
+podium data, rematch available
+4. QR Join, Lobby, and Character Select
+The join funnel must be fast enough that a new player can enter the room without instructions from the host. For the first playable, the fastest route is a large QR code on the TV that opens a lightweight web controller with the session token already embedded.
+Recommended Join Funnel
+• Scan QR on the TV.
+• Phone opens the controller page and validates the active room token.
+• Player enters a nickname or accepts an auto-generated one.
+• Player browses the pre-designed hero roster, previews, and locks a character.
+• Player presses Ready; the TV updates the lobby card in real time.
+• When everyone is ready, the room advances to countdown or game voting.
+Lobby States
+State
+TV behavior
+Phone behavior
+Waiting for Players
+Large QR code remains visible; empty slots animate
+Join page and nickname entry
+Character Select
+Show roster lineup and taken/available heroes
+Swipe/tap/hold to preview and lock hero
+Ready Check
+Show ready rings and missing players
+Ready button, change hero if unlocked
+Countdown
+Show lineup animation and round intro
+Phone confirms controller mode incoming
+Reconnect Prompt
+Reserve absent player's slot briefly
+Reconnect banner and restore session
+Character selection rule set
+Launch with a curated roster of pre-designed heroes. Duplicates are off by default, but the host may enable duplicates in party settings. Locked characters remain reserved until the player unlocks, disconnects beyond the grace period, or the session resets.
+Figure 2. Launch hero roster mood sheet.
+
+High-level visual target for the pre-designed character lineup used in the QR join and character-select flow.
+5. Character Roster and Production Guidelines
+The hero roster is designed to be instantly readable both on a television and on a handheld phone screen. Each character should have a distinct silhouette, color family, prop language, and idle personality. Characters are cosmetic-first so every mini-game can share the same balanced ruleset.
+Hero
+Fantasy
+Visual cues
+Personality read
+Byte
+Arcade kid
+Cap, headset, hoodie, gamepad gestures
+Fast, playful, mischievous
+Nova
+Young inventor
+Glasses, lab coat, gadgets, flasks
+Curious, clever, energetic
+Orbit
+Mini astronaut
+Bubble helmet, backpack, space suit
+Optimistic, brave, floaty
+Striker
+Street football star
+Athletic pose, headband, ball control
+Competitive, friendly, confident
+Sizzle
+Party chef
+Chef hat, spatula, food flair
+Warm, funny, showman
+Shade
+Purple ninja
+Scarf, masked silhouette, twin blades
+Precise, cool, stealthy
+Dusty
+Cowboy adventurer
+Hat, boots, western belt, lasso attitude
+Bold, rugged, comedic swagger
+Pop
+Roller skater
+Pads, bright hair, drink cup, skates
+Bubbly, stylish, upbeat
+Character Production Specification
+• Create a CharacterDefinition ScriptableObject with hero id, display name, one-line fantasy, portrait sprite, 3D prefab reference, voice pack, emote list, color tag, and availability state.
+• Design each hero with a large head, simplified torso, strong hands, and one signature prop so they remain readable at TV distance.
+• Share a common rig and animation vocabulary across the roster to keep Unity production efficient.
+• Keep material response premium and toy-like: clean roughness values, soft rim lighting, and broad value separation between skin, cloth, metal, and prop surfaces.
+• Author front, side, and back turnarounds before final in-engine modeling to protect silhouette clarity.
+6. Mini-Game Lineup and Input Patterns
+Moments works best when the party set rotates across different verbs: deflect, push, capture, throw, drive, race, and scramble. The launch set below groups mini-games that are easy to understand on sight and that prove the phone-controller system across multiple input patterns.
+Mini-game
+Core objective
+Controller pattern
+Production focus
+Space Shootout
+Deflect energy orbs into rivals' goals
+Move + aim/deflect
+Arena readability, rebound physics, scoring
+Polar Push
+Knock rivals off a shrinking ice platform
+Move + dash
+Collision feedback, edge danger, simple objective
+Color Clash
+Capture floor tiles by stepping or dashing
+Move + tap / dash
+Territory readability, last-second swings
+Crate Crash
+Throw pickups and break armor
+Move + throw / interact
+Short-range chaos, prop variety, hit feedback
+Tank Battle
+Arena combat with steering and fire
+Steer + fire + boost
+Twin-stick abstraction on phone, projectile clarity
+Dash Circuit
+Short race with boosts and hazards
+Steer + boost
+Speed readability and catch-up tuning
+Medieval Mayhem
+Arena challenges with bombs and king-of-the-hill
+Move + contextual action
+Rule variety within one theme
+Controller Layout Rules
+• Never show more than two primary thumb zones during active play unless a mini-game truly requires it.
+• Swap layouts dynamically per mini-game so the phone only presents relevant controls.
+• Use haptic pulses for join confirm, ready confirm, impact hits, item pickup, elimination, and podium placement.
+• Frame the phone UI with strong player color so the controller itself reinforces identity in the room.
+7. TV UX, Phone UX, and Wireframe Notes
+This section consolidates the earlier wireframe pack into implementation guidance so the master document stays readable without carrying large page-screenshot inserts.
+The television is the public stage; the phone is private utility. That separation should remain consistent throughout the session.
+TV UX Principles
+• Large type and low clutter for readability from 2 to 5 meters away.
+• QR code remains visible in the join state and may stay anchored in one corner while players are still entering.
+• Character lineup and readiness should be legible in a single glance.
+• Results screens should favor celebration and comparison over dense statistics.
+Phone UX Principles
+• Join flow is linear: Scan -&gt; Name -&gt; Character Select -&gt; Ready.
+• Character cards must use large portraits, one-line fantasy copy, and clear available / taken / locked states.
+• During gameplay, the screen should be dark and battery-safe, with only the control zones and essential prompts visible.
+• Disconnected users should see a clear reconnect state rather than a silent failure screen.
+Scene / module
+Role
+Key objects
+TV_Boot
+Attract mode and entry point
+Session bootstrapper, branding, QR generator
+TV_Join
+Live room creation and intake
+Room state manager, player card UI, settings
+TV_Lobby
+Character selection and ready check
+Roster view, availability logic, ready gates
+TV_Vote
+Mini-game selection
+Playlist manager, voting widgets, tie resolver
+TV_Intro
+Rules and countdown
+Instruction card, announcer cues, controller assignment
+TV_Play_*
+One scene per mini-game or loaded subscene
+Authoritative gameplay systems, arena camera
+TV_Results
+Post-round summary
+Score delta UI, medals, next-round routing
+TV_Finale
+End-of-session celebration
+Podium stage, confetti, rematch buttons
+Recommended Core Systems
+• SessionStateManager: persistent room and match state across scenes.
+• PlayerRegistry: player slot, nickname, hero, readiness, connection state, score.
+• ControllerGateway: websocket transport, reconnection, input normalization.
+• MiniGameDefinition: ScriptableObject for objectives, timer, controller layout, scoring, and scene reference.
+• ResultsAggregator: medals, placement, streaks, and cumulative party standings.
+• CharacterDefinition: hero data object used by TV, phone, and results presentation.
+Recommended Folder Shape
+Folder
+Use
+Assets/_Moments/Core
+Session, room, state machine, shared services
+Assets/_Moments/Characters
+Definitions, portraits, prefabs, emotes
+Assets/_Moments/Minigames
+One folder per mini-game with scenes and scripts
+Assets/_Moments/UI_TV
+TV widgets, overlays, scoreboards, lobby screens
+Assets/_Moments/UI_Phone
+Controller layouts, join flow assets, icons
+Assets/_Moments/Art
+Environment kits, VFX, materials, lighting profiles
+Assets/_Moments/Audio
+Announcer cues, UI sounds, mini-game music
+9. First Playable Scope and Production Roadmap
+For fastest validation, the first milestone should prove the social funnel, one complete lobby loop, and a small set of mini-games that collectively test the core control patterns.
+Milestone
+Contents
+Why it matters
+Vertical Slice
+TV attract, QR join, nickname entry, character select, one polished mini-game, score screen, reconnect flow
+Proves the complete end-to-end promise.
+Core Alpha
+4 mini-games, session flow, art style lock, party settings, analytics
+Validates system breadth and baseline retention.
+Content Beta
+7 mini-games, audio pass, balancing, accessibility, localization
+Makes the package feel launch-complete.
+Launch Readiness
+Optimization, QA matrix, marketing capture, storefront assets, live-ops hooks
+Supports real-world deployment quality.
+Recommended First Three Mini-Games
+• Polar Push - proves movement plus dash with a universally readable objective.
+• Color Clash - proves territory capture and strong TV readability of floor-state changes.
+• Tank Battle - proves steering, firing, and more advanced phone input mapping.
+Production focus
+Do not overbuild customization before the join loop, TV readability, and controller reliability are solid. The fastest way to make Moments feel premium is a flawless start-to-finish room flow plus one or two extremely polished mini-games.
+10. Asset Checklist and Implementation Notes
+Below is the consolidated launch-oriented checklist synthesized from the earlier design documents.
+Category
+Required items
+TV scenes
+Boot, attract, join, lobby, vote, intro, play, results, finale
+Phone flows
+QR landing, nickname, roster browse, lock-in, ready, reconnect, settings
+Character assets
+Portraits, 3D prefabs, shared rig, idle loops, win/lose emotes, color markers
+Environment kits
+Arena props, hazards, hero set piece, collision art, lighting profile
+VFX
+Hit spark, explosion, dash trail, score burst, tile paint, ice crack, confetti
+Audio
+Join cue, ready cue, countdown, announcer, mini-game stingers, results, podium
+Networking
+Room token, slot reservation, reconnect grace, latency handling, analytics
+QA matrix
+TV resolutions, phone aspect ratios, reconnect cases, battery use, accessibility
+Implementation Notes
+• Keep all gameplay-affecting state authoritative on the TV. Phones should not own match simulation.
+• Use Addressables for mini-game scenes so the shell stays stable while content scales.
+• Cache the phone web app aggressively after first launch to reduce repeat join friction.
+• Make controller layout assignment data-driven, not hard-coded per screen, so new mini-games can be added without rebuilding the full UI layer.
+• Design all TV screens with couch-distance testing at real scale, not just in the Unity Game view on a desktop monitor.
+Appendix A. Broader Visual Target
+
+The broader visual target for Moments is a vibrant, premium, toy-like 3D party presentation in which the TV hub, mini-games, and character roster all feel like one coherent brand universe.
+Appendix B. Source Consolidation Note
+This master document combines and expands the content that was previously split across the Moments Unity Mini-Game Design Document, the QR Join + Character Select update, the Character Design + Lobby Flow Pack, and the Unity Scene Flow / TV Phone Wireframe Pack. It is intended to be the main reference document going forward.
