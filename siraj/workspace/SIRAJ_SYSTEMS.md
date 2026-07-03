@@ -45,3 +45,12 @@
 ## Active Projects
 
 (append status per game here — this file is Siraj's working memory)
+
+### Moments — Vertical Slice (active)
+- Gates: 8/21 passed; stage 9 (rigging_animation) — rigs done, 11-clip animation set pending
+- Roster: 7/8 heroes CANON (official-art image-to-3d, rigged, 15k, Unity FBX in projects/moments/exports/) — Nova awaits her reference sheet
+- Arena: 6 procedural FBX (tiles x3, rim+_COL_, icebergs x2)
+- Code: 15 C# systems + phone-controller.html prebuilt for stage 13
+- Credits: ~360 spent, 1190 remain (floor alarm 100)
+- Blocked: Unity stages (10+) need the machine with Unity 6; repo write access 403 (12+ commits local, snapshots delivered to owner)
+
