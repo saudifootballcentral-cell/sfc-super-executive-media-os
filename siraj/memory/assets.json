@@ -40,5 +40,16 @@
     "tris": 176,
     "path": "projects/moments/exports/Iceberg_B.fbx",
     "ts": "2026-07-03T02:56:35Z"
+  },
+  {
+    "name": "Byte",
+    "route": "meshy",
+    "tris": 15000,
+    "rigged": true,
+    "mecanim": true,
+    "path": "projects/moments/exports/Byte.fbx",
+    "meshy_task_id": "019f281d-eab4-7a62-a0a9-36bb552a5a62",
+    "note": "FIRST HERO THROUGH THE FULL TRIANGLE in-session",
+    "ts": "2026-07-03T19:20:05Z"
   }
 ]

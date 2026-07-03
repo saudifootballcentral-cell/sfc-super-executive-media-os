@@ -42,5 +42,61 @@
     "kind": "text-to-3d-preview",
     "status": "started",
     "ts": "2026-07-03T19:16:29Z"
+  },
+  {
+    "name": "Nova",
+    "task_id": "019f2969-2d6d-7363-9a0a-657dc786e434",
+    "kind": "text-to-3d-preview",
+    "status": "SUCCEEDED",
+    "glb": "projects/moments/meshy/Nova_preview.glb",
+    "ts": "2026-07-03T19:17:31Z"
+  },
+  {
+    "name": "Pop",
+    "task_id": "019f2969-33ca-77e6-b11e-a2c517e70d27",
+    "kind": "text-to-3d-preview",
+    "status": "SUCCEEDED",
+    "glb": "projects/moments/meshy/Pop_preview.glb",
+    "ts": "2026-07-03T19:17:50Z"
+  },
+  {
+    "name": "Orbit",
+    "task_id": "019f2969-3293-7b30-9602-d8184cf0d415",
+    "kind": "text-to-3d-preview",
+    "status": "SUCCEEDED",
+    "glb": "projects/moments/meshy/Orbit_preview.glb",
+    "ts": "2026-07-03T19:17:50Z"
+  },
+  {
+    "name": "Byte",
+    "task_id": "019f2969-2a03-7b2f-ae26-f3ed638eaf2e",
+    "kind": "text-to-3d-refine",
+    "status": "SUCCEEDED",
+    "glb": "projects/moments/meshy/Byte.glb",
+    "ts": "2026-07-03T19:18:11Z"
+  },
+  {
+    "name": "Nova",
+    "task_id": "019f296c-3331-7416-952b-d8cf07acec03",
+    "kind": "text-to-3d-refine",
+    "status": "started",
+    "preview_task": "019f2969-2d6d-7363-9a0a-657dc786e434",
+    "ts": "2026-07-03T19:19:44Z"
+  },
+  {
+    "name": "Orbit",
+    "task_id": "019f296c-37b7-7bd9-a5b9-5562e0080c8f",
+    "kind": "text-to-3d-refine",
+    "status": "started",
+    "preview_task": "019f2969-3293-7b30-9602-d8184cf0d415",
+    "ts": "2026-07-03T19:19:45Z"
+  },
+  {
+    "name": "Pop",
+    "task_id": "019f296c-3d4a-7bda-b023-bec137c8c12d",
+    "kind": "text-to-3d-refine",
+    "status": "started",
+    "preview_task": "019f2969-33ca-77e6-b11e-a2c517e70d27",
+    "ts": "2026-07-03T19:19:47Z"
   }
 ]
