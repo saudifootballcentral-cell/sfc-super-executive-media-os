@@ -1,0 +1,20 @@
+{
+  "id": "eb9ed89b95d3",
+  "stage": "rigging_animation",
+  "title": "Shared 11-clip animation set on Mecanim rig",
+  "act_as": "rigging-engineer",
+  "priority": 9,
+  "payload": {},
+  "attempts": 0,
+  "created": "2026-07-03T20:15:15Z",
+  "history": [
+    {
+      "ts": "2026-07-03T20:15:15Z",
+      "event": "dispatched"
+    },
+    {
+      "ts": "2026-07-03T20:16:33Z",
+      "event": "done"
+    }
+  ]
+}

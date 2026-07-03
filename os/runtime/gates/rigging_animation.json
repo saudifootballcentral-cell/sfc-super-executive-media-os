@@ -1,0 +1,7 @@
+{
+  "stage": "rigging_animation",
+  "status": "pass",
+  "note": "8/8 heroes rigged (Mecanim names) + 11-clip HeroAnimationSet.fbx on identical skeleton; in-Unity Humanoid retarget verification lands at unity_import per pipeline",
+  "criteria": "Characters rigged (Mecanim names) + animation set retargets",
+  "ts": "2026-07-03T20:16:33Z"
+}
