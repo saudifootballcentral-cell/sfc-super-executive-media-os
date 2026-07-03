@@ -122,5 +122,13 @@
     "status": "SUCCEEDED",
     "glb": "projects/moments/meshy/Pop.glb",
     "ts": "2026-07-03T19:21:31Z"
+  },
+  {
+    "name": "Orbit_img",
+    "task_id": "019f2975-2f0d-71b4-8d7c-0ef2cbb017fb",
+    "kind": "image-to-3d",
+    "status": "started",
+    "source": "projects/moments/concept/crop_orbit.png",
+    "ts": "2026-07-03T19:29:35Z"
   }
 ]

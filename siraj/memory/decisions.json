@@ -227,5 +227,12 @@
     "verdict": "APPROVED by Creative Director",
     "note": "Human arcade-kid face (bible reading) confirmed as roster style over key-art LED visor. Preview task 019f281d-eab4-7a62-a0a9-36bb552a5a62 -> refine authorized.",
     "ts": "2026-07-03T19:16:15Z"
+  },
+  {
+    "kind": "route_update",
+    "asset": "Orbit (pilot)",
+    "note": "Creative Director directive: use image-to-3d from provided key art. Pilot comparison: Orbit_img (from Blink Shot crop) vs existing text-to-3d Orbit. CD picks canon; winner formula applies to roster.",
+    "by": "creative-director",
+    "ts": "2026-07-03T19:29:26Z"
   }
 ]
