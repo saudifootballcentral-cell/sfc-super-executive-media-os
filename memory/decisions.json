@@ -234,5 +234,71 @@
     "note": "Creative Director directive: use image-to-3d from provided key art. Pilot comparison: Orbit_img (from Blink Shot crop) vs existing text-to-3d Orbit. CD picks canon; winner formula applies to roster.",
     "by": "creative-director",
     "ts": "2026-07-03T19:29:26Z"
+  },
+  {
+    "kind": "asset_route",
+    "route": "meshy",
+    "asset": "Striker",
+    "type": "character",
+    "reason": "organic/complex form — Meshy image-to-3d exceeds the procedural sculpting ceiling",
+    "poly_budget": 15000,
+    "chain": [
+      "reuse: no existing asset with this name",
+      "retexture: not a variant/skin",
+      "procedural: not geometric/exact-dims"
+    ],
+    "meshy_kind": "image-to-3d",
+    "ts": "2026-07-03T19:33:05Z"
+  },
+  {
+    "kind": "asset_route",
+    "route": "meshy",
+    "asset": "Sizzle",
+    "type": "character",
+    "reason": "organic/complex form — Meshy image-to-3d exceeds the procedural sculpting ceiling",
+    "poly_budget": 15000,
+    "chain": [
+      "reuse: no existing asset with this name",
+      "retexture: not a variant/skin",
+      "procedural: not geometric/exact-dims"
+    ],
+    "meshy_kind": "image-to-3d",
+    "ts": "2026-07-03T19:33:05Z"
+  },
+  {
+    "kind": "asset_route",
+    "route": "meshy",
+    "asset": "Shade",
+    "type": "character",
+    "reason": "organic/complex form — Meshy image-to-3d exceeds the procedural sculpting ceiling",
+    "poly_budget": 15000,
+    "chain": [
+      "reuse: no existing asset with this name",
+      "retexture: not a variant/skin",
+      "procedural: not geometric/exact-dims"
+    ],
+    "meshy_kind": "image-to-3d",
+    "ts": "2026-07-03T19:33:05Z"
+  },
+  {
+    "kind": "asset_route",
+    "route": "meshy",
+    "asset": "Dusty",
+    "type": "character",
+    "reason": "organic/complex form — Meshy image-to-3d exceeds the procedural sculpting ceiling",
+    "poly_budget": 15000,
+    "chain": [
+      "reuse: no existing asset with this name",
+      "retexture: not a variant/skin",
+      "procedural: not geometric/exact-dims"
+    ],
+    "meshy_kind": "image-to-3d",
+    "ts": "2026-07-03T19:33:05Z"
+  },
+  {
+    "kind": "roster_directive",
+    "note": "CD provided official white-bg reference pairs for 7 heroes (all but Nova) + Pop master bible with T-pose turnaround, animation state machine and AI texture prompts. Canonical Byte = LED visor. Regenerating slice trio (Byte/Orbit/Pop) + generating Alpha four (Striker/Sizzle/Shade/Dusty) via image-to-3d from Gameplay crops. Nova pending her sheet. Earth-miner turnaround archived as concept (identity TBD).",
+    "by": "creative-director",
+    "ts": "2026-07-03T19:33:05Z"
   }
 ]

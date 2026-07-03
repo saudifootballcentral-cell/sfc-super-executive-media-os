@@ -130,5 +130,69 @@
     "status": "started",
     "source": "projects/moments/concept/crop_orbit.png",
     "ts": "2026-07-03T19:29:35Z"
+  },
+  {
+    "name": "Orbit_img",
+    "task_id": "019f2975-2f0d-71b4-8d7c-0ef2cbb017fb",
+    "kind": "image-to-3d",
+    "status": "SUCCEEDED",
+    "glb": "projects/moments/meshy/Orbit_img.glb",
+    "ts": "2026-07-03T19:32:21Z"
+  },
+  {
+    "name": "Byte_img",
+    "task_id": "019f2978-9973-7e8b-8a94-003e5196006c",
+    "kind": "image-to-3d",
+    "status": "started",
+    "source": "projects/moments/concept/refs/crop_byte_gameplay.png",
+    "ts": "2026-07-03T19:33:20Z"
+  },
+  {
+    "name": "Pop_img",
+    "task_id": "019f2978-a34f-725e-8ef1-222f9b9bedf0",
+    "kind": "image-to-3d",
+    "status": "started",
+    "source": "projects/moments/concept/refs/crop_pop_gameplay.png",
+    "ts": "2026-07-03T19:33:22Z"
+  },
+  {
+    "name": "Striker_img",
+    "task_id": "019f2978-a8d7-7e8e-b914-af7e9e11064a",
+    "kind": "image-to-3d",
+    "status": "started",
+    "source": "projects/moments/concept/refs/crop_striker_gameplay.png",
+    "ts": "2026-07-03T19:33:24Z"
+  },
+  {
+    "name": "Sizzle_img",
+    "task_id": "019f2978-ab2e-7e8e-83b8-efbe25528b66",
+    "kind": "image-to-3d",
+    "status": "started",
+    "source": "projects/moments/concept/refs/crop_sizzle_gameplay.png",
+    "ts": "2026-07-03T19:33:24Z"
+  },
+  {
+    "name": "Orbit2_img",
+    "task_id": "019f2978-9d79-77a6-8224-992809695665",
+    "kind": "image-to-3d",
+    "status": "started",
+    "source": "projects/moments/concept/refs/crop_orbit_gameplay.png",
+    "ts": "2026-07-03T19:33:25Z"
+  },
+  {
+    "name": "Dusty_img",
+    "task_id": "019f2978-b4d0-7a9e-97e9-8e6438fe7006",
+    "kind": "image-to-3d",
+    "status": "started",
+    "source": "projects/moments/concept/refs/crop_dusty_gameplay.png",
+    "ts": "2026-07-03T19:33:27Z"
+  },
+  {
+    "name": "Shade_img",
+    "task_id": "019f2978-b1c6-7a9e-b78b-7a19801ac07d",
+    "kind": "image-to-3d",
+    "status": "started",
+    "source": "projects/moments/concept/refs/crop_shade_gameplay.png",
+    "ts": "2026-07-03T19:33:33Z"
   }
 ]
