@@ -71,7 +71,7 @@ def _download(task, name):
     print(f"DONE {out}")
     return out
 
-def text_to_3d(prompt, name, style="sculpture", polys=15000, pbr=True):
+def text_to_3d(prompt, name, style="realistic", polys=15000, pbr=True):
     print("[1/2] preview...")
     prev = _req("POST", "/v2/text-to-3d", {
         "mode": "preview", "prompt": prompt, "art_style": style,
@@ -106,8 +106,8 @@ if __name__ == "__main__":
 
     t = sub.add_parser("text")
     t.add_argument("prompt"); t.add_argument("--name", required=True)
-    t.add_argument("--style", default="sculpture",
-                   choices=["realistic", "sculpture"])
+    t.add_argument("--style", default="realistic",
+                   choices=["realistic"])
     t.add_argument("--polys", type=int, default=15000)
     t.add_argument("--no-pbr", action="store_true")
 
