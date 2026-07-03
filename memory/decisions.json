@@ -201,5 +201,10 @@
       "retexture: not a variant/skin"
     ],
     "ts": "2026-07-03T02:44:59Z"
+  },
+  {
+    "kind": "infra",
+    "note": "Blender 5.0.1 installed as bpy in the cloud session (PyPI). Procedural pipeline runs in-cloud; stage-7 artifacts prebuilt while stage 6 awaits Meshy access. api.meshy.ai + download.blender.org blocked by env network policy.",
+    "ts": "2026-07-03T02:56:35Z"
   }
 ]

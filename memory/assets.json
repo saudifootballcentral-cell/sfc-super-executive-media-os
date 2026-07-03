@@ -1,0 +1,44 @@
+[
+  {
+    "name": "IceTile_Solid",
+    "route": "procedural",
+    "tris": 20,
+    "path": "projects/moments/exports/IceTile_Solid.fbx",
+    "ts": "2026-07-03T02:56:35Z"
+  },
+  {
+    "name": "IceTile_Cracked",
+    "route": "procedural",
+    "tris": 56,
+    "path": "projects/moments/exports/IceTile_Cracked.fbx",
+    "ts": "2026-07-03T02:56:35Z"
+  },
+  {
+    "name": "IceTile_Breaking",
+    "route": "procedural",
+    "tris": 48,
+    "path": "projects/moments/exports/IceTile_Breaking.fbx",
+    "ts": "2026-07-03T02:56:35Z"
+  },
+  {
+    "name": "ArenaRim_COL",
+    "route": "procedural",
+    "tris": 336,
+    "path": "projects/moments/exports/ArenaRim_COL.fbx",
+    "ts": "2026-07-03T02:56:35Z"
+  },
+  {
+    "name": "Iceberg_A",
+    "route": "procedural",
+    "tris": 176,
+    "path": "projects/moments/exports/Iceberg_A.fbx",
+    "ts": "2026-07-03T02:56:35Z"
+  },
+  {
+    "name": "Iceberg_B",
+    "route": "procedural",
+    "tris": 176,
+    "path": "projects/moments/exports/Iceberg_B.fbx",
+    "ts": "2026-07-03T02:56:35Z"
+  }
+]
