@@ -33,5 +33,26 @@
     "note": "12 assets routed and logged: 4 heroes + penguin=meshy, tiles/rim/icebergs/anims=procedural",
     "criteria": "Every asset routed via asset_router.py; decisions logged",
     "ts": "2026-07-03T02:45:19Z"
+  },
+  {
+    "stage": "meshy_generation",
+    "status": "pass",
+    "note": "4/4 hero GLBs generated+refined (preview QA before refine spend); Penguin polish-only per spec",
+    "criteria": "All Meshy GLBs downloaded (preview approved before refine)",
+    "ts": "2026-07-03T19:22:54Z"
+  },
+  {
+    "stage": "procedural_assets",
+    "status": "pass",
+    "note": "6 procedural FBX in exports/ (tiles x3, rim+col, icebergs x2), all under budget",
+    "criteria": "All procedural assets exported from Blender",
+    "ts": "2026-07-03T19:22:54Z"
+  },
+  {
+    "stage": "asset_refine",
+    "status": "pass",
+    "note": "every asset through meshy_refine/task scripts: grounded pivot, budget decimation, Unity axes",
+    "criteria": "Every asset through Blender refine: pivot, decimate to budget, FBX",
+    "ts": "2026-07-03T19:22:54Z"
   }
 ]

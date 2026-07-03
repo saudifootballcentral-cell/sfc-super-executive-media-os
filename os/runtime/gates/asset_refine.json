@@ -1,0 +1,7 @@
+{
+  "stage": "asset_refine",
+  "status": "pass",
+  "note": "every asset through meshy_refine/task scripts: grounded pivot, budget decimation, Unity axes",
+  "criteria": "Every asset through Blender refine: pivot, decimate to budget, FBX",
+  "ts": "2026-07-03T19:22:54Z"
+}
