@@ -1,0 +1,14 @@
+{
+  "id": "9c140ccc58ce",
+  "stage": "unity_import",
+  "title": "Run MomentsSetup Verify Imports on the Unity machine (drop-in ready)",
+  "act_as": "unity-architect",
+  "priority": 9,
+  "payload": {
+    "runbook": "projects/moments/UNITY_RUNBOOK.md",
+    "dropin": "projects/moments/unity/Assets/"
+  },
+  "attempts": 0,
+  "created": "2026-07-03T20:54:09Z",
+  "history": []
+}
