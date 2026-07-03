@@ -307,5 +307,23 @@
     "verdict": "APPROVED by Creative Director",
     "note": "Official-art image-to-3d roster approved (option 1). All 7 rigged + FBX. Byte/Orbit/Pop canon v2 replace text-to-3d v1; Nova stays v1 pending her sheet.",
     "ts": "2026-07-03T19:49:11Z"
+  },
+  {
+    "kind": "design_data",
+    "source": "slice-four showcase sheet",
+    "playstyles": {
+      "byte": "speedster",
+      "nova": "all-rounder",
+      "orbit": "controller",
+      "pop": "trickster"
+    },
+    "weapons": {
+      "byte": "Data Blade",
+      "nova": "Star Hammer",
+      "orbit": "Gravity Orbiter",
+      "pop": "Bubble Blaster"
+    },
+    "note": "4 color variants per hero on sheet -> future skins via Meshy retexture route (canon task ids in memory assets). Playstyles feed CharacterAbilitySystem when the Alpha toggle flips. Turnarounds archived for modeling QA.",
+    "ts": "2026-07-03T19:51:45Z"
   }
 ]
