@@ -13,5 +13,34 @@
     "status": "SUCCEEDED",
     "glb": "projects/moments/meshy/Byte_preview.glb",
     "ts": "2026-07-03T13:16:45Z"
+  },
+  {
+    "name": "Byte",
+    "task_id": "019f2969-2a03-7b2f-ae26-f3ed638eaf2e",
+    "kind": "text-to-3d-refine",
+    "status": "started",
+    "preview_task": "019f281d-eab4-7a62-a0a9-36bb552a5a62",
+    "ts": "2026-07-03T19:16:25Z"
+  },
+  {
+    "name": "Nova",
+    "task_id": "019f2969-2d6d-7363-9a0a-657dc786e434",
+    "kind": "text-to-3d-preview",
+    "status": "started",
+    "ts": "2026-07-03T19:16:28Z"
+  },
+  {
+    "name": "Orbit",
+    "task_id": "019f2969-3293-7b30-9602-d8184cf0d415",
+    "kind": "text-to-3d-preview",
+    "status": "started",
+    "ts": "2026-07-03T19:16:29Z"
+  },
+  {
+    "name": "Pop",
+    "task_id": "019f2969-33ca-77e6-b11e-a2c517e70d27",
+    "kind": "text-to-3d-preview",
+    "status": "started",
+    "ts": "2026-07-03T19:16:29Z"
   }
 ]
