@@ -1,10 +1,4 @@
-# runtime state — the engine owns these, never commit a live queue
-os/runtime/queue/*/*.json
-os/runtime/gates/*.json
-os/runtime/project.json
-memory/*.json
-
-# secrets — MESHY_API_KEY / UGS credentials live here
+# secrets — MESHY_API_KEY / Unity credentials NEVER enter git
 home/mulerun/.env
 .env
 

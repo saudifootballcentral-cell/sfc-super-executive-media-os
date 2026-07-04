@@ -325,5 +325,11 @@
     },
     "note": "4 color variants per hero on sheet -> future skins via Meshy retexture route (canon task ids in memory assets). Playstyles feed CharacterAbilitySystem when the Alpha toggle flips. Turnarounds archived for modeling QA.",
     "ts": "2026-07-03T19:51:45Z"
+  },
+  {
+    "kind": "handoff_prep",
+    "note": "Drop-in Unity package assembled per postprocessor contracts (Characters/=Humanoid, Models/=colliders): 15 FBX + 15 systems + bridge scripts + MomentsSetup one-click bootstrap (verify/definitions/boot scene/polar push scene) + UNITY_RUNBOOK.md mapping every remaining gate to concrete steps.",
+    "by": "unity-architect",
+    "ts": "2026-07-03T20:54:09Z"
   }
 ]

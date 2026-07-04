@@ -1,5 +1,9 @@
 # سراج (Siraj) — Enterprise Game Development OS
 
+> **Canonical home**: this tree is designed to live as the root of the
+> dedicated `Siraj` repository (see `MIGRATION.md`). Engine state and all
+> game objects are tracked in git — only secrets are not.
+
 An autonomous game-development agent that runs as a **Claude Code project**:
 one brain, 27 specialist studio agents, a file-based orchestration engine,
 and a real **Meshy → Blender → Unity** production pipeline. Idea in,
